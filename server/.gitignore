@@ -1,0 +1,34 @@
+# Env files
+.env
+.env.local
+.env.producation
+
+#Build files
+*.exe
+*.out
+*.dll
+*.so
+*.sylib
+
+#Go Build folders
+bin/
+dist/
+
+#Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_STORE
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+
+#Coverage
+coverage.out
+*.test
