@@ -15,6 +15,7 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		auth.POST("/google",handlers.GoogleLogin)
 		auth.POST("/logout",handlers.Logout)
+		auth.POST("/refresh",handlers.RefreshToken)
 		auth.GET("/me",handlers.Me)
 	}
 

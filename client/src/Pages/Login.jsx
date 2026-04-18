@@ -1,9 +1,12 @@
 import { useState } from "react"
 import { GoogleLogin } from "@react-oauth/google"
 import api from "../api/axios.js"
+import { useAuth } from "../context/AuthContext.jsx"
+import { useNavigate } from "react-router-dom"
 
 function Login() {
-    
+    const { loadUser } = useAuth()
+    const navigate = useNavigate()
     const [ loading , setLoading ] = useState(false)
     const [ error , setError ] = useState("")
 
@@ -14,11 +17,9 @@ function Login() {
 
         try {
             const token = credentailResponse.credential
-            const res = await api.post("/auth/google" , {
-                token
-            })
-            const message = res.data?.message
-            window.location.href = "/home"
+            await api.post("/auth/google",{token})
+            await loadUser()
+            navigate("/home")
         } catch (err) {
             setError(
                 err.response?.data?.message || "Login Failed , Please Try Again"

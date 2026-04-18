@@ -7,8 +7,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var accessSecret  = []byte(os.Getenv("JWT_ACCESS_SECRET"))
-var refreshSecret = []byte(os.Getenv("JWT_REFRESH_SECRET"))
+// var accessSecret  = []byte(os.Getenv("JWT_ACCESS_SECRET"))
+// var refreshSecret = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 
 func GenerateAccessToken( name , email , avatar string ) (string, error) {
 
@@ -23,7 +23,7 @@ func GenerateAccessToken( name , email , avatar string ) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
 
-	return token.SignedString(accessSecret)
+	return token.SignedString([]byte(os.Getenv("JWT_ACCESS_SECRET")))
 
 }
 
@@ -38,6 +38,6 @@ func GeneraeteRefreshToken(email string) (string , error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
 	
-	return token.SignedString(refreshSecret)
+	return token.SignedString([]byte(os.Getenv("JWT_REFRESH_SECRET")))
 
 }
