@@ -19,9 +19,11 @@ function Chat() {
     const socket = useRef(null)
     const bottomRef = useRef(null)
     const typingTimeoutRef = useRef(null)
+    const fileInputRef = useRef(null)
     const [friends, setFriends] = useState([])
     const [selectedFriend, setSelectedFriend] = useState(null)
     const [showList, setShowList] = useState(true)
+    const [image, setImage] = useState(null)
 
     const loadFriends = async () => {
         try {
@@ -53,6 +55,15 @@ function Chat() {
         } catch (err) {
             setMessages([])
         }
+    }
+
+    const uploadImage = async (file) => {
+        const formData = new FormData()
+        formData.append("image", file)
+        const res = await api.post("/auth/chat/upload", formData, {
+            headers: { "Content-Type": "multipart/form-data" }
+        })
+        return res.data.url
     }
 
     const startChat = async (targetEmail = email) => {
@@ -98,21 +109,31 @@ function Chat() {
     }
 
     const sendMessage = async () => {
-        if (!message.trim()) return
+        if (!message.trim() && !image) return
         try {
+            let imageUrl = ""
+            if (image) {
+                imageUrl = await uploadImage(image)
+            }
             await api.post("/auth/chat/send", {
                 email,
-                content: message
+                content: message,
+                image_url: imageUrl,
             })
             socket.current?.send(
                 JSON.stringify({
                     type: "message",
                     from: user?.Email,
                     to: email,
-                    content: message
+                    content: message,
+                    image: imageUrl
                 })
             )
             setMessage("")
+            setImage(null)
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ""
+            }
             await loadMessages(email)
         } catch (err) {
             console.error(err)
@@ -276,7 +297,7 @@ function Chat() {
                                     No Messages Yet
                                 </div>
                             ) : (
-                                messages.map((msg, index) => {
+                                messages.map((msg) => {
                                     const isMe = msg.SenderID === user?.ID || msg.from === user?.Email
                                     // const isLastMessage = index === messages.length - 1
                                     const lastMsg = messages.at(-1)
@@ -293,7 +314,14 @@ function Chat() {
                                                         : "bg-white text-gray-800 rounded-bl-md"
                                                         }`}
                                                 >
-                                                    {msg.Content}
+                                                    {msg.Content && <p>{msg.Content}</p>}
+                                                    {msg.ImageURL && (
+                                                        <img
+                                                            src={msg.ImageURL}
+                                                            alt="send"
+                                                            className="mt-2 rounded-lg max-w-full"
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
                                             {isMe && isLastMessage && msg.IsRead && (
@@ -312,43 +340,74 @@ function Chat() {
                             )}
                             <div ref={bottomRef}></div>
                         </div>
-                        <div className="p-3 border-t bg-white flex gap-2">
-                        <input
-                            value={message}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") sendMessage()
-                            }}
-                            onChange={(e) => {
-                                setMessage(e.target.value)
-                                socket.current?.send(
-                                    JSON.stringify({
-                                        type: "typing",
-                                        from: user?.Email,
-                                        to: email
-                                    })
-                                )
-                            }}
-                            placeholder="Type Message..."
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500"
-                        />
-                        <button
-                            onClick={sendMessage}
-                            disabled={!message.trim()}
-                            className={`text-white px-5 rounded-xl ${message.trim()
-                                ? "bg-purple-600"
-                                : "bg-gray-300 cursor-not-allowed"
-                                }`}
-                        >
-                            Send
-                        </button>
-                    </div>
+                        <div className="p-3 border-t bg-white space-y-2">
+                            {image && (
+                                <div className="px-2 text-xs text-gray-600 flex items-center justify-between gap-2">
+                                    <span>{image.name}</span>
+                                    <button
+                                        onClick={() => {
+                                            setImage(null)
+                                            if (fileInputRef.current) {
+                                                fileInputRef.current.value = ""
+                                            }
+                                        }}
+                                        className="text-red-500"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    hidden
+                                    id="chat-image-upload"
+                                    onChange={(e) => setImage(e.target.files?.[0] || null)}
+                                />
+                                <label
+                                    htmlFor="chat-image-upload"
+                                    className="px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 cursor-pointer hover:bg-gray-50"
+                                >
+                                    Add Image
+                                </label>
+                            </div>
+                            <div className="flex gap-0.5">
+                                <input
+                                    value={message}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") sendMessage()
+                                    }}
+                                    onChange={(e) => {
+                                        setMessage(e.target.value)
+                                        socket.current?.send(
+                                            JSON.stringify({
+                                                type: "typing",
+                                                from: user?.Email,
+                                                to: email
+                                            })
+                                        )
+                                    }}
+                                    placeholder="Type Message..."
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500"
+                                />
+                                <button
+                                    onClick={sendMessage}
+                                    disabled={!message.trim() && !image}
+                                    className={`text-white px-5 rounded-xl ${message.trim() || image
+                                        ? "bg-purple-600"
+                                        : "bg-gray-300 cursor-not-allowed"
+                                        }`}
+                                >
+                                    Send
+                                </button>
+                            </div>
+
+                        </div>
+
                     </>
                 )}
-
-
-                {/* {chatStarted && (
-                    
-                )} */}
             </div>
         </MobileLayout>
 

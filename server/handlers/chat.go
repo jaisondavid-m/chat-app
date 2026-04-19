@@ -66,6 +66,7 @@ func SendMessage(c *gin.Context) {
 		SenderID:   sender.ID,
 		ReceiverID: receiver.ID,
 		Content:    req.Content,
+		ImageURL: req.ImageURL,
 	}
 
 	config.DB.Create(&msg)
