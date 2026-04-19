@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import api from "../api/axios"
 import MobileLayout from "../Components/MobileLayout"
@@ -7,6 +8,7 @@ import Loading from "../Components/Loading"
 function Chat() {
 
     const { user } = useAuth()
+    const [searchParams] = useSearchParams()
     const [email, setEmail] = useState("")
     const [message, setMessage] = useState("")
     const [messages, setMessages] = useState([])
@@ -34,23 +36,28 @@ function Chat() {
         }
     }
 
-    const startChat = async () => {
-        if (!email.trim()) return
+    const startChat = async (targetEmail = email) => {
+        const normalizedEmail = (targetEmail || "").trim()
+        if (!normalizedEmail) return
+        setEmail(normalizedEmail)
         setChatStarted(true)
         setLoading(true)
+        if (socket.current) {
+            socket.current.close()
+        }
         // await loadMessages(email)
         socket.current = new WebSocket(
             `ws://localhost:8000/api/auth/ws?email=${user?.Email}`
         )
         socket.current.onopen = async () => {
-            await loadMessages(email)
+            await loadMessages(normalizedEmail)
             setLoading(false)
         }
         socket.current.onmessage = (event) => {
             const data = JSON.parse(event.data)
             if (data.type === "message") {
                 // setMessages((prev) => [...prev, data])
-                loadMessages(email)
+                loadMessages(normalizedEmail)
             }
             if (data.type === "typing") {
                 setTyping(true)
@@ -103,7 +110,7 @@ function Chat() {
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-    },[messages])
+    }, [messages])
 
     useEffect(() => {
         return () => {
@@ -112,7 +119,13 @@ function Chat() {
                 clearTimeout(typingTimeoutRef.current)
             }
         }
-    },[])
+    }, [])
+
+    useEffect(() => {
+        const initialEmail = (searchParams.get("email") || "").trim()
+        if (!initialEmail || !user?.Email) return
+        startChat(initialEmail)
+    }, [searchParams, user?.Email])
 
     return (
         <MobileLayout>
@@ -154,22 +167,31 @@ function Chat() {
                             No Messages Yet
                         </div>
                     ) : (
-                        messages.map((msg) => {
+                        messages.map((msg, index) => {
                             const isMe = msg.SenderID === user?.ID || msg.from === user?.Email
+                            const isLastMessage = index === messages.length - 1
                             return (
-                                <div
-                                    key={msg.ID}
-                                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                                >
+                                <>
                                     <div
-                                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow ${isMe
+                                        key={msg.ID}
+                                        className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                                    >
+                                        <div
+                                            className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow ${isMe
                                                 ? "bg-purple-600 text-white rounded-br-md"
                                                 : "bg-white text-gray-800 rounded-bl-md"
-                                            }`}
-                                    >
-                                        {msg.Content || msg.content}
+                                                }`}
+                                        >
+                                            {msg.Content || msg.content}
+                                        </div>
                                     </div>
-                                </div>
+                                    {isMe && isLastMessage && seen && (
+                                        <div className="text-right pr-2 mt-1 text-[11px] text-gray-400">
+                                            Seen ✓
+                                        </div>
+                                    )}
+                                </>
+
                             )
                         })
                     )}
@@ -203,11 +225,10 @@ function Chat() {
                         <button
                             onClick={sendMessage}
                             disabled={!message.trim()}
-                            className={`text-white px-5 rounded-xl ${
-                                message.trim()
+                            className={`text-white px-5 rounded-xl ${message.trim()
                                     ? "bg-purple-600"
                                     : "bg-gray-300 cursor-not-allowed"
-                            }`}
+                                }`}
                         >
                             Send
                         </button>

@@ -8,7 +8,7 @@ import Setting from '../Pages/Setting.jsx'
 import ProtectedRoute from '../routes/ProtectedRoute.jsx'
 import PublicRoute from '../routes/PublicRoute.jsx'
 import NotFound from "../Pages/NotFound.jsx"
-
+import Friends from '../Pages/Friends.jsx'
 
 function App() {
   return (
@@ -20,6 +20,7 @@ function App() {
           <Route path='/groups' element={<ProtectedRoute><Groups/></ProtectedRoute>}/>
           <Route path='/profile' element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
           <Route path='/setting' element={<ProtectedRoute><Setting/></ProtectedRoute>}/>
+          <Route path='/friends' element={<ProtectedRoute><Friends/></ProtectedRoute>}/>
           <Route path='*' element={<NotFound/>} />
         </Routes>
     </BrowserRouter>

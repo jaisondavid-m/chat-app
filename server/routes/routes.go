@@ -21,6 +21,12 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/chat/send",handlers.SendMessage)
 		auth.GET("/chat/message/:email",handlers.GetMessages)
 		auth.GET("/ws",handlers.ChatSocket)
+		auth.POST("/friend/request",handlers.SendFriendRequest)
+		auth.GET("/friend/requests",handlers.GetFriendRequests)
+		auth.POST("/friend/accept/:id",handlers.AcceptFriendRequest)
+		auth.POST("/friend/reject/:id",handlers.RejectFriendRequest)
+		auth.DELETE("/friend/:id",handlers.DeleteFriend)
+		auth.GET("/friends",handlers.GetFriends)
 	}
 
 	api.GET("/health",func(c *gin.Context) {

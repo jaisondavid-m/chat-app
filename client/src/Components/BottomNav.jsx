@@ -1,6 +1,6 @@
 import { NavLink , useLocation } from "react-router-dom"
 import { FaUser , FaUsers , FaCog  } from "react-icons/fa"
-import { FaMessage } from "react-icons/fa6"
+import { FaMessage , FaUserGroup } from "react-icons/fa6"
 
 function BottomNav() {
 
@@ -8,6 +8,7 @@ function BottomNav() {
 
     const tabs = [
         { path: "/chat" , label: "Chat" , icon: <FaMessage size={18}/> },
+        { path: "/friends" , label: "Friends" , icon: <FaUserGroup size={18}/> },
         { path: "/groups" , label: "Group" , icon: <FaUsers size={18}/> },
         { path: "/profile" , label: "Profile" , icon: <FaUser size={18} /> },
         { path: "/setting" , label: "Setting" , icon: <FaCog size={18}/> },
