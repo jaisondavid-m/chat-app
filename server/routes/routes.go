@@ -20,6 +20,7 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.PUT("/user/profile",handlers.UpdateProfile)
 		auth.POST("/chat/send",handlers.SendMessage)
 		auth.GET("/chat/message/:email",handlers.GetMessages)
+		auth.GET("/ws",handlers.ChatSocket)
 	}
 
 	api.GET("/health",func(c *gin.Context) {
