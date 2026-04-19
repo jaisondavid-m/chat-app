@@ -15,7 +15,7 @@ function Chat() {
     const [loading, setLoading] = useState(false)
     const [chatStarted, setChatStarted] = useState(false)
     const [typing, setTyping] = useState(false)
-    const [seen, setSeen] = useState(false)
+    // const [seen, setSeen] = useState(false)
     const socket = useRef(null)
     const bottomRef = useRef(null)
     const typingTimeoutRef = useRef(null)
@@ -35,14 +35,21 @@ function Chat() {
     const loadMessages = async (targetEmail) => {
         try {
             const res = await api.get(`/auth/chat/message/${targetEmail}`)
-            setMessages(res.data.messages || [])
-            socket.current?.send(
-                JSON.stringify({
-                    type: "seen",
-                    from: user?.Email,
-                    to: targetEmail
-                })
-            )
+            const msgs = res.data.messages || []
+            setMessages(msgs)
+            const last = msgs[msgs.length - 1]
+            if (last && last.SenderID !== user.ID) {
+                await api.put(`/auth/messages/seen/${targetEmail}`)
+                const updated = await api.get(`/auth/chat/message/${targetEmail}`)
+                setMessages(updated.data.messages || [])
+                socket.current?.send(
+                    JSON.stringify({
+                        type: "seen",
+                        from: user?.Email,
+                        to: targetEmail,
+                    })
+                )
+            }
         } catch (err) {
             setMessages([])
         }
@@ -84,7 +91,7 @@ function Chat() {
                 }, 3000);
             }
             if (data.type === "seen") {
-                setSeen(true)
+                loadMessages(normalizedEmail)
             }
         }
         // setLoading(false)
@@ -106,7 +113,6 @@ function Chat() {
                 })
             )
             setMessage("")
-            setSeen(false)
             await loadMessages(email)
         } catch (err) {
             console.error(err)
@@ -272,7 +278,9 @@ function Chat() {
                             ) : (
                                 messages.map((msg, index) => {
                                     const isMe = msg.SenderID === user?.ID || msg.from === user?.Email
-                                    const isLastMessage = index === messages.length - 1
+                                    // const isLastMessage = index === messages.length - 1
+                                    const lastMsg = messages.at(-1)
+                                    const isLastMessage = msg.ID === lastMsg?.ID
                                     return (
                                         <>
                                             <div
@@ -285,10 +293,10 @@ function Chat() {
                                                         : "bg-white text-gray-800 rounded-bl-md"
                                                         }`}
                                                 >
-                                                    {msg.Content || msg.content}
+                                                    {msg.Content}
                                                 </div>
                                             </div>
-                                            {isMe && isLastMessage && seen && (
+                                            {isMe && isLastMessage && msg.IsRead && (
                                                 <div className="text-right text-[11px] text-gray-400 mt-1">
                                                     Seen ✓
                                                 </div>
@@ -338,11 +346,6 @@ function Chat() {
                 )}
 
 
-                {/* {seen && (
-                    <div className="px-4 text-right text-xs text-gray-400">
-                        Seen ✓✓
-                    </div>
-                )} */}
                 {/* {chatStarted && (
                     
                 )} */}

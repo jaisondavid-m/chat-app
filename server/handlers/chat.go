@@ -5,6 +5,7 @@ import (
 	"server/config"
 	"server/models"
 	"server/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -123,4 +124,62 @@ func GetMessages(c *gin.Context) {
 		"messages": messages,
 	})
 
+}
+
+func MarkSeen(c *gin.Context) {
+	friendEmail := c.Param("email")
+
+	token, err := c.Cookie("access_token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	claims, err := utils.VerifyAccessToken(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	myEmail, ok := claims["email"].(string)
+	if !ok || myEmail == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	var me models.User
+	var friend models.User
+
+	if err := config.DB.Where("email = ?", myEmail).First(&me).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "User Not Found",
+		})
+		return
+	}
+
+	if err := config.DB.Where("email = ?", friendEmail).First(&friend).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "User Not Found",
+		})
+		return
+	}
+
+	now := time.Now()
+
+	config.DB.Model(&models.Message{}).
+		Where("sender_id = ? AND receiver_id = ? AND is_read = ?", friend.ID, me.ID, false).
+		Updates(map[string]interface{}{
+			"is_read": true,
+			"read_at": now,
+		})
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Seen Updated",
+	})
 }

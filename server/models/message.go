@@ -1,6 +1,10 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Message struct {
 
@@ -8,8 +12,8 @@ type Message struct {
 	SenderID 		uint		`gorm:"not null"`
 	ReceiverID 		uint		`gorm:"not null"`
 	Content 		string 		`gorm:"type:text;not null"`
-	isRead 			bool 		`gorm:"default:false"`
-
+	IsRead 			bool 		`gorm:"default:false"`
+	ReadAt			*time.Time
 }
 
 type SendMessageRequest struct {
