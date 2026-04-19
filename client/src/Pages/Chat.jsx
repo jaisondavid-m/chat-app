@@ -21,6 +21,7 @@ function Chat() {
     const typingTimeoutRef = useRef(null)
     const [friends, setFriends] = useState([])
     const [selectedFriend, setSelectedFriend] = useState(null)
+    const [showList, setShowList] = useState(true)
 
     const loadFriends = async () => {
         try {
@@ -54,6 +55,7 @@ function Chat() {
         const friend = friends.find(f => f.Email === normalizedEmail)
         setSelectedFriend(friend || null)
         setChatStarted(true)
+        setShowList(false)
         setLoading(true)
         if (socket.current) {
             socket.current.close()
@@ -147,9 +149,54 @@ function Chat() {
         setSelectedFriend(friend || null)
     }, [friends, email])
 
+    const goBackToList = () => {
+        setShowList(true)
+        setChatStarted(false)
+        setMessage("")
+        setTyping(false)
+    }
+
     return (
         <MobileLayout>
-            <div className="flex flex-col h-[calc(100vh-90px)] bg-gray-100 overflow-hidden">
+            <div className="flex flex-col h-full bg-gray-100 overflow-hidden">
+                {showList && (
+                    <div className="flex flex-col flex-1 min-h-0">
+                        {/* <div className="bg-white px-4 py-4 border-b">
+                            <h1 className="text-xl font-bold text-gray-800">
+                                Chats
+                            </h1>
+                        </div> */}
+                        <div className="flex-1 overflow-y-auto bg-white">
+                            {friends.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-gray-400">
+                                    No Friends Yet
+                                </div>
+                            ) : (
+                                friends.map((friend) => (
+                                    <button
+                                        key={friend.ID}
+                                        onClick={() => startChat(friend.Email)}
+                                        className="flex w-full px-4 py-3 items-center gap-3 border-b hover:bg-gray-50 transition"
+                                    >
+                                        <img
+                                            src={friend.Avatar}
+                                            alt=""
+                                            className={`w-12 h-12 rounded-full object-cover `}
+                                        />
+                                        <div className="text-left flex-1">
+                                            <p className="font-medium text-gray-800">
+                                                {friend.Name}
+                                            </p>
+                                            <p className="text-sm text-gray-400">
+                                                {friend.Email}
+                                            </p>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
                 {/* <div className="p-4 border-b bg-white space-y-3">
                     <p className="text-sm text-gray-500">
                         Logged in as <span>{user?.Name}</span>
@@ -175,28 +222,9 @@ function Chat() {
                         </p>
                     )}
                 </div> */}
-                <div className="bg-white border-b px-3 py-3 overflow-x-auto">
+                {/* <div className="bg-white border-b px-3 py-3 overflow-x-auto">
                     <div className="flex gap-3 w-max">
-                        {friends.map((friend) => (
-                            <button
-                                key={friend.ID}
-                                onClick={() => startChat(friend.Email)}
-                                className="flex flex-col items-center min-w-16.25"
-                            >
-                                <img
-                                    src={friend.Avatar}
-                                    alt=""
-                                    className={`w-14 h-14 rounded-full border-2 ${
-                                        email === friend.Email
-                                            ? "border-purple-600"
-                                            : "border-gray-200"
-                                    }`}
-                                />
-                                <span className="text-xs mt-1 text-gray-600 truncate w-16">
-                                    {friend.Name}
-                                </span>
-                            </button>
-                        ))}
+
                     </div>
                 </div>
                 {chatStarted && selectedFriend && (
@@ -210,60 +238,73 @@ function Chat() {
                             <p className="text-xs text-gray-400">{selectedFriend.Email}</p>
                         </div>
                     </div>
-                )}
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                    {!chatStarted ? (
-                        <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                            Start a friend to start conversation
-                        </div>
-                    ) : loading ? (
-                        <Loading text="Loading Chat ..." />
-                    ) : messages.length === 0 ? (
-                        <div className="text-center text-gray-400 text-sm">
-                            No Messages Yet
-                        </div>
-                    ) : (
-                        messages.map((msg, index) => {
-                            const isMe = msg.SenderID === user?.ID || msg.from === user?.Email
-                            const isLastMessage = index === messages.length - 1
-                            return (
-                                <>
-                                    <div
-                                        key={msg.ID}
-                                        className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                                    >
-                                        <div
-                                            className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow wrap-break-word ${isMe
-                                                ? "bg-purple-600 text-white rounded-br-md"
-                                                : "bg-white text-gray-800 rounded-bl-md"
-                                                }`}
-                                        >
-                                            {msg.Content || msg.content}
-                                        </div>
-                                    </div>
-                                    {isMe && isLastMessage && seen && (
-                                        <div className="text-right text-[11px] text-gray-400 mt-1">
-                                            Seen ✓
-                                        </div>
-                                    )}
-                                </>
-                            )
-                        })
-                    )}
-                    {typing && (
-                        <p className="text-xs text-gray-400 italick">
-                            Typing
-                        </p>
-                    )}
-                    <div ref={bottomRef}></div>
-                </div>
-                {/* {seen && (
-                    <div className="px-4 text-right text-xs text-gray-400">
-                        Seen ✓✓
-                    </div>
                 )} */}
-                {chatStarted && (
-                    <div className="p-3 border-t bg-white flex gap-2">
+                {!showList && (
+                    <>
+                        <div className="bg-white px-4 py-3 border-b flex items-center gap-3">
+                            <button
+                                onClick={goBackToList}
+                                className="text-xl font-bold text-purple-600"
+                            >
+                                ←
+                            </button>
+                            <img
+                                src={selectedFriend?.Avatar}
+                                alt=""
+                                className="w-10 h-10 rounded-full"
+                            />
+                            <div>
+                                <p className="font-medium text-sm">
+                                    {selectedFriend?.Name}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    {selectedFriend?.Email}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                            {loading ? (
+                                <Loading text="Loading Chat ..." />
+                            ) : messages.length === 0 ? (
+                                <div className="text-center text-gray-400 text-sm">
+                                    No Messages Yet
+                                </div>
+                            ) : (
+                                messages.map((msg, index) => {
+                                    const isMe = msg.SenderID === user?.ID || msg.from === user?.Email
+                                    const isLastMessage = index === messages.length - 1
+                                    return (
+                                        <>
+                                            <div
+                                                key={msg.ID}
+                                                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                                            >
+                                                <div
+                                                    className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow wrap-break-word ${isMe
+                                                        ? "bg-purple-600 text-white rounded-br-md"
+                                                        : "bg-white text-gray-800 rounded-bl-md"
+                                                        }`}
+                                                >
+                                                    {msg.Content || msg.content}
+                                                </div>
+                                            </div>
+                                            {isMe && isLastMessage && seen && (
+                                                <div className="text-right text-[11px] text-gray-400 mt-1">
+                                                    Seen ✓
+                                                </div>
+                                            )}
+                                        </>
+                                    )
+                                })
+                            )}
+                            {typing && (
+                                <p className="text-xs text-gray-400 italic">
+                                    Typing
+                                </p>
+                            )}
+                            <div ref={bottomRef}></div>
+                        </div>
+                        <div className="p-3 border-t bg-white flex gap-2">
                         <input
                             value={message}
                             onKeyDown={(e) => {
@@ -286,14 +327,25 @@ function Chat() {
                             onClick={sendMessage}
                             disabled={!message.trim()}
                             className={`text-white px-5 rounded-xl ${message.trim()
-                                    ? "bg-purple-600"
-                                    : "bg-gray-300 cursor-not-allowed"
+                                ? "bg-purple-600"
+                                : "bg-gray-300 cursor-not-allowed"
                                 }`}
                         >
                             Send
                         </button>
                     </div>
+                    </>
                 )}
+
+
+                {/* {seen && (
+                    <div className="px-4 text-right text-xs text-gray-400">
+                        Seen ✓✓
+                    </div>
+                )} */}
+                {/* {chatStarted && (
+                    
+                )} */}
             </div>
         </MobileLayout>
 
