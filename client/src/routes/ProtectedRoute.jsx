@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import Loading from "../Components/Loading.jsx"
 
 export default function ProtectedRoute({ children }) {
 
@@ -7,9 +8,10 @@ export default function ProtectedRoute({ children }) {
 
     if (loading) {
         return (
-            <div className="h-screen flex items-center justify-center">
-                Loading...
-            </div>
+            <Loading />
+            // <div className="h-screen flex items-center justify-center">
+            //     Loading...
+            // </div>
         )
     }
 
