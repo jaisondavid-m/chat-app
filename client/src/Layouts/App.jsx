@@ -14,7 +14,7 @@ function App() {
   return (
     <BrowserRouter>
         <Routes>
-          <Route path='/' element={<Navigate to="/home"/>} />
+          <Route path='/' element={<Navigate to="/chat"/>} />
           <Route path='/login' element={<PublicRoute><Login/></PublicRoute>} />
           <Route path='chat' element={<ProtectedRoute><Chat/></ProtectedRoute>} />
           <Route path='/groups' element={<ProtectedRoute><Groups/></ProtectedRoute>}/>

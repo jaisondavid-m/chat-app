@@ -34,7 +34,7 @@ func GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	googleID, _ := payload.Claims["subs"].(string)
+	googleID, _ := payload.Claims["sub"].(string)
 	name, _ := payload.Claims["name"].(string)
 	email, _ := payload.Claims["email"].(string)
 	picture, _ := payload.Claims["picture"].(string)

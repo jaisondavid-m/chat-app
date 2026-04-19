@@ -18,6 +18,8 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/refresh",handlers.RefreshToken)
 		auth.GET("/me",handlers.Me)
 		auth.PUT("/user/profile",handlers.UpdateProfile)
+		auth.POST("/chat/send",handlers.SendMessage)
+		auth.GET("/chat/message/:email",handlers.GetMessages)
 	}
 
 	api.GET("/health",func(c *gin.Context) {
