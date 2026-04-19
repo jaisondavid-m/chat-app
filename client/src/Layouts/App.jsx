@@ -1,10 +1,14 @@
 import React from 'react'
 import { BrowserRouter , Routes , Route , Navigate } from "react-router-dom"
 import Login from "../Pages/Login.jsx"
-import Home from '../Pages/Home.jsx'
+import Chat from '../Pages/Chat.jsx'
+import Groups from '../Pages/Groups.jsx'
+import Profile from '../Pages/Profile.jsx'
+import Setting from '../Pages/Setting.jsx'
 import ProtectedRoute from '../routes/ProtectedRoute.jsx'
 import PublicRoute from '../routes/PublicRoute.jsx'
 import NotFound from "../Pages/NotFound.jsx"
+
 
 function App() {
   return (
@@ -12,7 +16,10 @@ function App() {
         <Routes>
           <Route path='/' element={<Navigate to="/home"/>} />
           <Route path='/login' element={<PublicRoute><Login/></PublicRoute>} />
-          <Route path='home' element={<ProtectedRoute><Home/></ProtectedRoute>} />
+          <Route path='chat' element={<ProtectedRoute><Chat/></ProtectedRoute>} />
+          <Route path='/groups' element={<ProtectedRoute><Groups/></ProtectedRoute>}/>
+          <Route path='/profile' element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
+          <Route path='/setting' element={<ProtectedRoute><Setting/></ProtectedRoute>}/>
           <Route path='*' element={<NotFound/>} />
         </Routes>
     </BrowserRouter>

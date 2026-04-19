@@ -16,7 +16,7 @@ function NotFound() {
                 </p>
                 <div className="mt-6">
                     <Link
-                        to="/home"
+                        to="/chat"
                         className="inline-flex items-center gap-2 bg-purple-600 text-white px-5 py-2 rounded-xl hover:bg-purple-700 transition"
                     >
                         <FaHome/>
