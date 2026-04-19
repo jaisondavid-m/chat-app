@@ -192,17 +192,30 @@ func AcceptFriendRequest(c *gin.Context) {
 			return err
 		}
 
-		if err := tx.FirstOrCreate(&models.Friend{}, models.Friend{
-			UserID: me.ID,
-			FriendID: req.SenderID,
-		}).Error; err != nil {
+		ensureFriend := func(userID, friendID uint) error {
+			var relation models.Friend
+			err := tx.Unscoped().Where("user_id = ? AND friend_id = ?", userID, friendID).First(&relation).Error
+			if err == nil {
+				if relation.DeletedAt.Valid {
+					return tx.Unscoped().Model(&relation).Update("deleted_at", nil).Error
+				}
+				return nil
+			}
+			if err != gorm.ErrRecordNotFound {
+				return err
+			}
+
+			return tx.Create(&models.Friend{
+				UserID:   userID,
+				FriendID: friendID,
+			}).Error
+		}
+
+		if err := ensureFriend(me.ID, req.SenderID); err != nil {
 			return err
 		}
 
-		if err := tx.FirstOrCreate(&models.Friend{}, models.Friend{
-			UserID: req.SenderID,
-			FriendID: me.ID,
-		}).Error; err != nil {
+		if err := ensureFriend(req.SenderID, me.ID); err != nil {
 			return err
 		}
 
