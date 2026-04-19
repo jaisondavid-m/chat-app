@@ -18,7 +18,7 @@ func main() {
 	r := gin.Default()
 
 	r.Use(middleware.CorsConfig())
-
+	r.Static("/uploads","./uploads")
 	routes.RegisterRoutes(r)
 
 	log.Println("Server Running")

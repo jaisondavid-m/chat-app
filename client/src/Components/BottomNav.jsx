@@ -18,8 +18,8 @@ function BottomNav() {
     ),0)
 
     return (
-        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-50">
-            <div className="relative bg-white/30 backdrop-blur-xl border border-white/20 rounded-2xl shadow-lg shadow-black/10 flex justify-around items-center py-2 px-1">
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[92%] max-w-96 z-50">
+            <div className="relative bg-white/30 backdrop-blur-xl border border-purple-500 rounded-2xl shadow-lg shadow-black/10 flex justify-around items-center py-2 px-1">
                 <div
                     className="absolute top-1 bottom-1 w-1/4 rounded-xl bg-white/50 backdrop-blur-2xl shadow-md transition-all duration-300 ease-in-out"
                     style={{

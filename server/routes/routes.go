@@ -17,6 +17,7 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/logout",handlers.Logout)
 		auth.POST("/refresh",handlers.RefreshToken)
 		auth.GET("/me",handlers.Me)
+		auth.PUT("/user/profile",handlers.UpdateProfile)
 	}
 
 	api.GET("/health",func(c *gin.Context) {
