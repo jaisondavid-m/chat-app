@@ -22,6 +22,8 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/chat/send",handlers.SendMessage)
 		auth.POST("/chat/upload",handlers.UploadImage)
 		auth.GET("/chat/message/:email",handlers.GetMessages)
+		auth.PUT("/chat/message/:id",handlers.EditMessage)
+		auth.PUT("/chat/message/delete/:id",handlers.DeleteMessage)
 		auth.PUT("/messages/seen/:email",handlers.MarkSeen)
 		auth.GET("/ws",handlers.ChatSocket)
 		auth.POST("/friend/request",handlers.SendFriendRequest)
