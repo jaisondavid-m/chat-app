@@ -31,6 +31,23 @@ func getCurrentUser(c *gin.Context) (models.User, bool) {
 	return user, true
 }
 
+func hasBlockRelation(user1ID, user2ID uint) (bool, error) {
+	var count int64
+	err := config.DB.Model(&models.Block{}).
+		Where(
+			"(user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)",
+			user1ID, user2ID,
+			user2ID, user1ID,
+		).
+		Count(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 func SendFriendRequest(c *gin.Context) {
 	me, ok := getCurrentUser(c)
 	if !ok {
@@ -61,6 +78,17 @@ func SendFriendRequest(c *gin.Context) {
 	}
 	if me.ID == friend.ID {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Cannot add Yourself"})
+		return
+	}
+	blocked, err := hasBlockRelation(me.ID, friend.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to process request"})
+		return
+	}
+	if blocked {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Cannot Send Friend request",
+		})
 		return
 	}
 	var pending models.FriendRequest
@@ -103,13 +131,6 @@ func SendFriendRequest(c *gin.Context) {
 	// 	})
 	// 	return
 	// }
-	
-	if isBlocked(me.ID, friend.ID) {
-		c.JSON(http.StatusForbidden,gin.H{
-			"message":"Cannot Send Friend request",
-		})
-		return
-	}
 
 	request := models.FriendRequest{
 		SenderID:   me.ID,
@@ -130,8 +151,16 @@ func GetFriendRequests(c *gin.Context) {
 		return
 	}
 	var requests []models.FriendRequest
+	blockSubQuery := config.DB.Model(&models.Block{}).
+		Select("1").
+		Where(
+			"(user_id = ? AND blocked_id = friend_requests.sender_id) OR (user_id = friend_requests.sender_id AND blocked_id = ?)",
+			me.ID,
+			me.ID,
+		)
 
 	if err := config.DB.Where("receiver_id = ? AND status = ?", me.ID, "pending").
+		Where("NOT EXISTS (?)", blockSubQuery).
 		Order("created_at DESC").Find(&requests).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to load requests"})
 		return
@@ -204,8 +233,8 @@ func AcceptFriendRequest(c *gin.Context) {
 		return
 	}
 	if isBlocked(me.ID, req.SenderID) {
-		c.JSON(http.StatusForbidden,gin.H{
-			"message":"Cannot Accept Request",
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Cannot Accept Request",
 		})
 		return
 	}
@@ -377,30 +406,42 @@ func DeleteFriend(c *gin.Context) {
 func BlockUser(c *gin.Context) {
 	me, ok := getCurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized,gin.H{
-			"message":"Unauthorized",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
 		})
 		return
 	}
 	id := c.Param("id")
 	var user models.User
-	if err := config.DB.First(&user,id).Error; err != nil {
-		c.JSON(http.StatusNotFound,gin.H{
-			"message":"User not found",
+	if err := config.DB.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "User not found",
 		})
 		return
 	}
 	if me.ID == user.ID {
-		c.JSON(http.StatusBadRequest,gin.H{
-			"message":"Cannot block yourself",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cannot block yourself",
 		})
 		return
 	}
 	err := config.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.FirstOrCreate(&models.Block{
-			UserID: me.ID,
-			BlockedID: user.ID,
-		}).Error; err != nil {
+		var block models.Block
+		err := tx.Unscoped().Where("user_id = ? AND blocked_id = ?", me.ID, user.ID).First(&block).Error
+		if err == nil {
+			if block.DeletedAt.Valid {
+				if err := tx.Unscoped().Model(&block).Update("deleted_at", nil).Error; err != nil {
+					return err
+				}
+			}
+		} else if err == gorm.ErrRecordNotFound {
+			if err := tx.Create(&models.Block{
+				UserID:    me.ID,
+				BlockedID: user.ID,
+			}).Error; err != nil {
+				return err
+			}
+		} else {
 			return err
 		}
 		if err := tx.Where(
@@ -418,57 +459,57 @@ func BlockUser(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{
-			"message":"Failed to block user",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to block user",
 		})
 		return
 	}
-	c.JSON(http.StatusOK,gin.H{
-		"message":"User Blocked",
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User Blocked",
 	})
 }
 
 func UnblockUser(c *gin.Context) {
 	me, ok := getCurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized,gin.H{
-			"message":"Unauthorized",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
 		})
 		return
 	}
 	id := c.Param("id")
-	if err := config.DB.Where(
+	if err := config.DB.Unscoped().Where(
 		"user_id = ? AND blocked_id = ?",
-		me.ID,id,
+		me.ID, id,
 	).Delete(&models.Block{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{
-			"message":"Failed to Unblock",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to Unblock",
 		})
 		return
 	}
-	c.JSON(http.StatusOK,gin.H{
-		"message":"User Unblocked",
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User Unblocked",
 	})
 }
 
 func GetBlockedUsers(c *gin.Context) {
 	me, ok := getCurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized,gin.H{
-			"message":"Unauthorized",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
 		})
 		return
 	}
 	var blocks []models.Block
-	if err := config.DB.Where("user_id = ?",me.ID).Find(&blocks).Error; err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{
-			"message":"Process Failed to proceed",
+	if err := config.DB.Where("user_id = ?", me.ID).Find(&blocks).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Process Failed to proceed",
 		})
 		return
 	}
 	if len(blocks) == 0 {
-		c.JSON(http.StatusOK,gin.H{
-			"users":[]models.User{},
+		c.JSON(http.StatusOK, gin.H{
+			"users": []models.User{},
 		})
 		return
 	}
@@ -477,21 +518,22 @@ func GetBlockedUsers(c *gin.Context) {
 		ids = append(ids, b.BlockedID)
 	}
 	var users []models.User
-	config.DB.Where("id IN ?",ids).Find(&users)
-	c.JSON(http.StatusOK,gin.H{
-		"users":users,
+	if err := config.DB.Where("id IN ?", ids).Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError,gin.H{
+			"message":"Server Error",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"users": users,
 	})
 }
 
-func isBlocked(user1ID,user2ID uint) bool {
+func isBlocked(user1ID, user2ID uint) bool {
+	blocked, err := hasBlockRelation(user1ID, user2ID)
+	if err != nil {
+		return true
+	}
 
-	var block models.Block
-
-	err := config.DB.Where(
-		"(user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)",
-		user1ID, user2ID,
-		user2ID, user1ID,
-	).First(&block).Error
-	
-	return err == nil
+	return blocked
 }
