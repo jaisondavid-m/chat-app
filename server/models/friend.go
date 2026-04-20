@@ -14,3 +14,9 @@ type Friend struct {
 	UserID 		uint 	`gorm:"not null;uniqueIndex:idx_user_friend_pair,priority:1"`
 	FriendID 	uint 	`gorm:"not null;uniqueIndex:idx_user_friend_pair,priority:2"`
 }
+
+type Block struct {
+	gorm.Model
+	UserID 		uint 	`gorm:"not null;uniqueIndex:idx_block_pair,priority:1"`
+	BlockedID	uint 	`gorm:"not null;uniqueIndex:idx_block_pair,priority:2"`
+}

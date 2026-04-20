@@ -17,6 +17,7 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/logout",handlers.Logout)
 		auth.POST("/refresh",handlers.RefreshToken)
 		auth.GET("/me",handlers.Me)
+		auth.GET("/presence/:email",handlers.GetPresence)
 		auth.PUT("/user/profile",handlers.UpdateProfile)
 		auth.POST("/chat/send",handlers.SendMessage)
 		auth.POST("/chat/upload",handlers.UploadImage)
@@ -29,6 +30,9 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/friend/reject/:id",handlers.RejectFriendRequest)
 		auth.DELETE("/friend/:id",handlers.DeleteFriend)
 		auth.GET("/friends",handlers.GetFriends)
+		auth.POST("/block/:id",handlers.BlockUser)
+		auth.DELETE("/unblock/:id",handlers.UnblockUser)
+		auth.GET("/blocks",handlers.GetBlockedUsers)
 	}
 
 	api.GET("/health",func(c *gin.Context) {

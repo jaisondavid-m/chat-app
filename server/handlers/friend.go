@@ -92,7 +92,17 @@ func SendFriendRequest(c *gin.Context) {
 		})
 		return
 	}
-
+	var block models.Block
+	err := config.DB.Where(
+		"(user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)",
+		me.ID, friend.ID, friend.ID, me.ID,
+	).First(&block).Error
+	if err == nil {
+		c.JSON(http.StatusForbidden,gin.H{
+			"message":"Cannot send request",
+		})
+		return
+	}
 	request := models.FriendRequest{
 		SenderID:   me.ID,
 		ReceiverID: friend.ID,
@@ -348,4 +358,113 @@ func DeleteFriend(c *gin.Context) {
 		"message": "Friend Removed",
 	})
 
+}
+
+func BlockUser(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Unauthorized",
+		})
+		return
+	}
+	id := c.Param("id")
+	var user models.User
+	if err := config.DB.First(&user,id).Error; err != nil {
+		c.JSON(http.StatusNotFound,gin.H{
+			"message":"User not found",
+		})
+		return
+	}
+	if me.ID == user.ID {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"message":"Cannot block yourself",
+		})
+		return
+	}
+	err := config.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.FirstOrCreate(&models.Block{
+			UserID: me.ID,
+			BlockedID: user.ID,
+		}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where(
+			"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
+			me.ID, user.ID, user.ID, me.ID,
+		).Delete(&models.FriendRequest{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where(
+			"(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+			me.ID, user.ID, user.ID, me.ID,
+		).Delete(&models.Friend{}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,gin.H{
+			"message":"Failed to block user",
+		})
+		return
+	}
+	c.JSON(http.StatusOK,gin.H{
+		"message":"User Blocked",
+	})
+}
+
+func UnblockUser(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Unauthorized",
+		})
+		return
+	}
+	id := c.Param("id")
+	if err := config.DB.Where(
+		"user_id = ? AND blocked_id = ?",
+		me.ID,id,
+	).Delete(&models.Block{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError,gin.H{
+			"message":"Failed to Unblock",
+		})
+		return
+	}
+	c.JSON(http.StatusOK,gin.H{
+		"message":"User Unblocked",
+	})
+}
+
+func GetBlockedUsers(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Unauthorized",
+		})
+		return
+	}
+	var blocks []models.Block
+	if err := config.DB.Where("user_id = ?",me.ID).Find(&blocks).Error; err != nil {
+		c.JSON(http.StatusInternalServerError,gin.H{
+			"message":"Process Failed to proceed",
+		})
+		return
+	}
+	if len(blocks) == 0 {
+		c.JSON(http.StatusOK,gin.H{
+			"users":[]models.User{},
+		})
+		return
+	}
+	var ids []uint
+	for _, b := range blocks {
+		ids = append(ids, b.BlockedID)
+	}
+	var users []models.User
+	config.DB.Where("id IN ?",ids).Find(&users)
+	c.JSON(http.StatusOK,gin.H{
+		"users":users,
+	})
 }

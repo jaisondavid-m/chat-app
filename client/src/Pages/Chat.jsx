@@ -24,11 +24,15 @@ function Chat() {
     const [selectedFriend, setSelectedFriend] = useState(null)
     const [showList, setShowList] = useState(true)
     const [image, setImage] = useState(null)
+    const [presence, setPresence] = useState({})
 
     const loadFriends = async () => {
         try {
             const res = await api.get("/auth/friends")
             setFriends(res.data?.friends || [])
+            res.data?.friends.forEach(friend => {
+                fetchPresence(friend.Email)
+            })
         } catch (err) {
             console.error(err)
         }
@@ -64,6 +68,18 @@ function Chat() {
             headers: { "Content-Type": "multipart/form-data" }
         })
         return res.data.url
+    }
+
+    const fetchPresence = async (friendEmail) => {
+        try {
+            const res = await api.get(`/auth/presence/${encodeURIComponent(friendEmail)}`)
+            setPresence(prev => ({
+                ...prev,
+                [friendEmail]: res.data
+            }))
+        } catch (err) {
+            console.error(err)
+        }
     }
 
     const startChat = async (targetEmail = email) => {
@@ -176,6 +192,15 @@ function Chat() {
         setSelectedFriend(friend || null)
     }, [friends, email])
 
+    useEffect(() => {
+        if (friends.length === 0) return
+        const interval = setInterval(() => {
+            friends.forEach(f => fetchPresence(f.Email))
+        }, 10000)
+
+        return () => clearInterval(interval)
+    }, [friends])
+
     const goBackToList = () => {
         setShowList(true)
         setChatStarted(false)
@@ -214,9 +239,24 @@ function Chat() {
                                             <p className="font-medium text-gray-800">
                                                 {friend.Name}
                                             </p>
-                                            <p className="text-sm text-gray-400">
-                                                {friend.Email}
-                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm text-gray-400">
+                                                    {friend.Email}
+                                                </p>
+                                                <span className="text-xs">
+                                                    {presence[friend.Email]?.online ? (
+                                                        <span className="text-green-500">● Online</span>
+                                                    ) : (
+                                                        <span className="text-gray-400">
+                                                            Last Seen{" "}
+                                                            {presence[friend.Email]?.last_seen
+                                                                ? new Date(presence[friend.Email].last_seen).toLocaleTimeString()
+                                                            : "recently"}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </div>
+
                                         </div>
                                     </button>
                                 ))
@@ -284,8 +324,19 @@ function Chat() {
                                 <p className="font-medium text-sm">
                                     {selectedFriend?.Name}
                                 </p>
-                                <p className="text-xs text-gray-400">
-                                    {selectedFriend?.Email}
+                                <p className="text-xs">
+                                    {presence[selectedFriend?.Email]?.online ? (
+                                        <span className="text-green-500">Online</span>
+                                    ) : (
+                                        <span className="text-gray-400">
+                                            Last Seen{" "}
+                                            {presence[selectedFriend?.Email]?.last_seen
+                                                ? new Date(presence[selectedFriend?.Email].last_seen).toLocaleTimeString()
+                                                : "recently"
+                                            }
+                                        </span>
+                                    )}
+                                    {/* {selectedFriend?.Email} */}
                                 </p>
                             </div>
                         </div>
