@@ -92,17 +92,25 @@ func SendFriendRequest(c *gin.Context) {
 		})
 		return
 	}
-	var block models.Block
-	err := config.DB.Where(
-		"(user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)",
-		me.ID, friend.ID, friend.ID, me.ID,
-	).First(&block).Error
-	if err == nil {
+	// var block models.Block
+	// err := config.DB.Where(
+	// 	"(user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)",
+	// 	me.ID, friend.ID, friend.ID, me.ID,
+	// ).First(&block).Error
+	// if err == nil {
+	// 	c.JSON(http.StatusForbidden,gin.H{
+	// 		"message":"Cannot send request",
+	// 	})
+	// 	return
+	// }
+	
+	if isBlocked(me.ID, friend.ID) {
 		c.JSON(http.StatusForbidden,gin.H{
-			"message":"Cannot send request",
+			"message":"Cannot Send Friend request",
 		})
 		return
 	}
+
 	request := models.FriendRequest{
 		SenderID:   me.ID,
 		ReceiverID: friend.ID,
@@ -193,6 +201,12 @@ func AcceptFriendRequest(c *gin.Context) {
 	}
 	if req.Status != "pending" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Request already processed"})
+		return
+	}
+	if isBlocked(me.ID, req.SenderID) {
+		c.JSON(http.StatusForbidden,gin.H{
+			"message":"Cannot Accept Request",
+		})
 		return
 	}
 	req.Status = "accepted"
@@ -467,4 +481,17 @@ func GetBlockedUsers(c *gin.Context) {
 	c.JSON(http.StatusOK,gin.H{
 		"users":users,
 	})
+}
+
+func isBlocked(user1ID,user2ID uint) bool {
+
+	var block models.Block
+
+	err := config.DB.Where(
+		"(user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)",
+		user1ID, user2ID,
+		user2ID, user1ID,
+	).First(&block).Error
+	
+	return err == nil
 }
