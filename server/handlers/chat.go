@@ -127,6 +127,76 @@ func GetMessages(c *gin.Context) {
 
 }
 
+func EditMessage(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Unauthorized",
+		})
+		return
+	}
+
+	id := c.Param("id")
+
+	var req struct {
+		Content string `json:"content"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"message":"Invalid Data",
+		})
+		return
+	}
+
+	// var msg models.Message
+	// if err := c.ShouldBindJSON(&req); err != nil {
+	// 	c.JSON(http.StatusBadRequest,gin.H{
+	// 		"message":"Invalid Data",
+	// 	})
+	// 	return
+	// }
+
+	var msg models.Message
+	if err := config.DB.First(&msg, id).Error; err != nil {
+		c.JSON(http.StatusNotFound,gin.H{
+			"message":"Message Not Found",
+		})
+		return
+	}
+
+	if msg.SenderID != me.ID {
+		c.JSON(http.StatusForbidden,gin.H{
+			"message":"Forbidden",
+		})
+		return
+	}
+
+	if msg.IsDeleted {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"message":"Cannot edit deleted message",
+		})
+	}
+
+	now := time.Now()
+
+	if err := config.DB.Model(&msg).Updates(map[string]interface{}{
+		"content": req.Content,
+		"is_edited": true,
+		"edited_at": &now,
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError,gin.H{
+			"message":"Failed to Edit",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"message":"Message Updated",
+	})
+
+}
+
 func MarkSeen(c *gin.Context) {
 	friendEmail := c.Param("email")
 
@@ -182,5 +252,57 @@ func MarkSeen(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Seen Updated",
+	})
+}
+
+func DeleteMessage(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Unauthorized",
+		})
+		return
+	}
+
+	id := c.Param("id")
+
+	var msg models.Message
+	if err := config.DB.First(&msg, id).Error; err != nil {
+		c.JSON(http.StatusNotFound,gin.H{
+			"message":"Message Not Found",
+		})
+		return
+	}
+
+	if msg.SenderID != me.ID {
+		c.JSON(http.StatusForbidden,gin.H{
+			"message":"Forbidden",
+		})
+		return
+	}
+
+	if msg.IsDeleted {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"message":"Alreay Deleted",
+		})
+		return
+	}
+
+	err := config.DB.Model(&msg).Updates(map[string]interface{}{
+		"content": "",
+		"image_url": "",
+		"is_deleted": true,
+		"is_edited": false,
+		"edited_at":nil,
+	}).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,gin.H{
+			"message":"Failed to delete",
+		})
+		return
+	}
+	c.JSON(http.StatusOK,gin.H{
+		"message":"Message Deleted Successfully",
 	})
 }

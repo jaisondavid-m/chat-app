@@ -519,8 +519,8 @@ func GetBlockedUsers(c *gin.Context) {
 	}
 	var users []models.User
 	if err := config.DB.Where("id IN ?", ids).Find(&users).Error; err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{
-			"message":"Server Error",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Server Error",
 		})
 		return
 	}

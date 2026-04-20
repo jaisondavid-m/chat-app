@@ -15,6 +15,9 @@ type Message struct {
 	ImageURL		string		`gorm:"type:text"`
 	IsRead 			bool 		`gorm:"default:false"`
 	ReadAt			*time.Time
+	IsEdited 		bool 		`gorm:"default:false"`
+	EditedAt 		*time.Time
+	IsDeleted 		bool		`gorm:"default:false"`
 }
 
 type SendMessageRequest struct {
