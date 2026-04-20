@@ -12,10 +12,11 @@ func Migrate() {
 		&models.Message{},
 		&models.FriendRequest{},
 		&models.Friend{},
+		&models.Block{},
 	)
 
 	if err != nil {
-		log.Fatal("Migration Failed:",err)
+		log.Fatal("Migration Failed:", err)
 	}
 
 	log.Println("Migration Completed Successfully")
