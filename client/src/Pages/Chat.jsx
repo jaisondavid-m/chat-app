@@ -6,7 +6,7 @@ import MobileLayout from "../Components/MobileLayout"
 import Loading from "../Components/Loading"
 
 function Chat() {
-
+    const emojis = ["😂", "❤️", "🔥", "🥲", "😭", "🥰", "🥹", "🙏"]
     const { user } = useAuth()
     const [searchParams] = useSearchParams()
     const [email, setEmail] = useState("")
@@ -29,7 +29,12 @@ function Chat() {
     const [showActions, setShowActions] = useState(false)
     const [editingId, setEditingId] = useState(null)
     const [editText, setEditText] = useState("")
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false)
     const pressTimer = useRef(null)
+    const messageInputRef = useRef(null)
+    const emojiPickerRef = useRef(null)
+    const [reactionMsg, setReactionMsg] = useState(null)
+    const [showReactionModal, setShowReactionModal] = useState(false)
 
     const loadFriends = async () => {
         try {
@@ -116,7 +121,7 @@ function Chat() {
             if (data.type === "typing") {
                 setTyping(true)
                 if (typingTimeoutRef.current) {
-                    clearInterval(typingTimeoutRef.current)
+                    clearTimeout(typingTimeoutRef.current)
                 }
                 typingTimeoutRef.current = setTimeout(() => {
                     setTyping(false)
@@ -156,6 +161,51 @@ function Chat() {
                 fileInputRef.current.value = ""
             }
             await loadMessages(email)
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
+    const renderMessageWithLinks = (text = "") => {
+
+        const urlRegex = /(https:\/\/[^\s]+|www\.[^\s]+)/gi
+
+        const parts = text.split(urlRegex)
+
+        return parts.map((part, index) => {
+            if (part.match(urlRegex)) {
+                const href = part.startsWith("http")
+                    ? part
+                    : `https://${part}`
+
+                return (
+                    <a
+                        key={index}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Click to open link"
+                        className="text-white underline break-all"
+                    >
+                        {part}
+                    </a>
+                )
+            }
+            return <React.Fragment key={index}>{part}</React.Fragment>
+        })
+
+    }
+
+    const reactToMessage = async (id, emoji) => {
+        try {
+            await api.put(`/auth/chat/message/react/${id}`, {
+                emoji,
+            })
+            socket.current?.send(JSON.stringify({
+                type: "message",
+                to: email,
+            }))
+            loadMessages(email)
         } catch (err) {
             console.error(err)
         }
@@ -266,11 +316,49 @@ function Chat() {
             if (e.key === "Escape") {
                 setShowActions(false)
                 setEditingId(null)
+                setShowEmojiPicker(false)
+                setShowReactionModal(false)
+                setReactionMsg(null)
             }
         }
-        window.addEventListener("keydown",close)
-        return () => window.removeEventListener("keydown",close)
-    },[])
+        window.addEventListener("keydown", close)
+        return () => window.removeEventListener("keydown", close)
+    }, [])
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!showEmojiPicker) return
+            if (
+                emojiPickerRef.current &&
+                !emojiPickerRef.current.contains(event.target)
+            ) {
+                setShowEmojiPicker(false)
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [showEmojiPicker])
+
+    const insertEmoji = (emoji) => {
+        const input = messageInputRef.current
+
+        if (!input) {
+            setMessage((prev) => `${prev}${emoji}`)
+            return
+        }
+
+        const start = input.selectionStart ?? message.length
+        const end = input.selectionEnd ?? message.length
+        const nextMessage = `${message.slice(0, start)}${emoji}${message.slice(end)}`
+
+        setMessage(nextMessage)
+        requestAnimationFrame(() => {
+            const cursorPosition = start + emoji.length
+            input.focus()
+            input.setSelectionRange(cursorPosition, cursorPosition)
+        })
+    }
 
     return (
         <MobileLayout>
@@ -315,7 +403,7 @@ function Chat() {
                                                             Last Seen{" "}
                                                             {presence[friend.Email]?.last_seen
                                                                 ? new Date(presence[friend.Email].last_seen).toLocaleTimeString()
-                                                            : "recently"}
+                                                                : "recently"}
                                                         </span>
                                                     )}
                                                 </span>
@@ -421,21 +509,25 @@ function Chat() {
                                         <React.Fragment key={msg.ID}>
                                             <div
                                                 // key={msg.ID}
-                                                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                                                className={`flex relative group ${isMe ? "justify-end" : "justify-start"}`}
                                             >
                                                 <div
+                                                    onDoubleClick={() => {
+                                                        setReactionMsg(msg)
+                                                        setShowReactionModal(true)
+                                                    }}
                                                     onMouseDown={() => isMe && startPress(msg)}
                                                     onMouseUp={cancelPress}
                                                     onMouseLeave={cancelPress}
                                                     onTouchStart={() => isMe && startPress(msg)}
                                                     onTouchEnd={cancelPress}
-                                                    className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow wrap-break-word ${isMe
+                                                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow wrap-break-word peer ${isMe
                                                         ? "bg-purple-600 text-white rounded-br-md"
                                                         : "bg-white text-gray-800 rounded-bl-md"
                                                         }`}
                                                 >
                                                     {msg.Content ? (
-                                                        <p>{msg.Content}</p>
+                                                        <p>{renderMessageWithLinks(msg.Content)}</p>
                                                     ) : (
                                                         <p className="italic opacity-70">Message deleted</p>
                                                     )}
@@ -450,12 +542,35 @@ function Chat() {
                                                         />
                                                     )}
                                                 </div>
+                                                {/* <div className={`opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto peer-hover:opacity-100 peer-hover:pointer-events-auto hover:opacity-100 hover:pointer-events-auto transition-all duration-150
+                                                    flex gap-1 flex-wrap absolute -top-10 z-20 ${
+                                                    isMe ? "right-0" : "left-0"
+                                                } bg-white px-2 py-1 rounded-xl shadow`}>
+                                                    {emojis.map((emo) => (
+                                                        <button
+                                                            key={emo}
+                                                            onClick={() => reactToMessage(msg.ID, emo)}
+                                                            className="text-sm hover:scale-125 transition"
+                                                            title="React"
+                                                        >
+                                                            {emo}
+                                                        </button>
+                                                    ))}
+                                                </div> */}
+                                                {msg.Reaction && (
+                                                    <div className={`absolute -bottom-3 text-sm bg-white px-2 rounded-full shadow ${
+                                                        isMe ? "right-2" : "left-2"
+                                                    }`}>
+                                                        {msg.Reaction}
+                                                    </div>
+                                                )}
                                             </div>
                                             {isMe && isLastMessage && msg.IsRead && (
                                                 <div className="text-right text-[11px] text-gray-400 mt-1">
                                                     Seen ✓
                                                 </div>
                                             )}
+
                                         </React.Fragment>
                                     )
                                 })
@@ -500,8 +615,36 @@ function Chat() {
                                     Add Image
                                 </label>
                             </div>
-                            <div className="flex gap-0.5">
+                            <div className="relative flex gap-0.5">
+                                {/* <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEmojiPicker((prev) => !prev)}
+                                        className="h-full px-3 border border-gray-200 rounded-xl text-xl hover:bg-gray-50"
+                                        title="Add emoji"
+                                    >
+                                        😀
+                                    </button>
+                                    {showEmojiPicker && (
+                                        <div
+                                            ref={emojiPickerRef}
+                                            className="absolute bottom-14 left-0 bg-white border border-gray-200 rounded-2xl shadow-lg p-2 grid grid-cols-4 gap-1 z-20"
+                                        >
+                                            {emojis.map((emo) => (
+                                                <button
+                                                    key={emo}
+                                                    type="button"
+                                                    onClick={() => insertEmoji(emo)}
+                                                    className="text-xl p-1 rounded-lg hover:bg-gray-100"
+                                                >
+                                                    {emo}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div> */}
                                 <input
+                                    ref={messageInputRef}
                                     value={message}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") sendMessage()
@@ -538,11 +681,11 @@ function Chat() {
             </div>
             {showActions && (
                 <div
-                 className="fixed inset-0 bg-black/30 flex items-end justify-center z-50"
-                 onClick={() => setShowActions(false)}
+                    className="fixed inset-0 bg-black/30 flex items-end justify-center z-50"
+                    onClick={() => setShowActions(false)}
                 >
                     <div className="bg-white w-full max-w-sm rounded-t-2xl p-4 space-y-3 animate-slideUp"
-                         onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <button
                             onClick={openEdit}
@@ -568,7 +711,7 @@ function Chat() {
             {editingId && (
                 <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setEditingId(null)}>
                     <div className="bg-white flex flex-col gap-y-4 p-4 rounded-2xl w-[90%] max-w-sm space-y-3"
-                     onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="font-semibold">Edit Message</h2>
                         <input
@@ -591,6 +734,46 @@ function Chat() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+            {showReactionModal && reactionMsg && (
+                <div 
+                    className="fixed inset-0 bg-black/30 flex items-end justify-center z-50"
+                    onClick={() => {
+                        setShowReactionModal(false)
+                        setReactionMsg(null)
+                    }}
+                >
+                    <div className="bg-white w-full max-w-sm rounded-t-3xl p-4" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-center font-semibold mb-3">
+                            React to Messagge
+                        </h2>
+                        <div className="grid grid-cols-4 gap-3">
+                            {emojis.map((emo) => (
+                                <button
+                                    key={emo}
+                                    onClick={() => {
+                                        if (!reactionMsg?.ID) return
+                                        reactToMessage(reactionMsg.ID, emo)
+                                        setShowReactionModal(false)
+                                        setReactionMsg(null)
+                                    }}
+                                    className="text-3xl p-2 rounded-xl hover:bg-gray-100 active:scale-95"
+                                >
+                                    {emo}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => {
+                                setShowReactionModal(false)
+                                setReactionMsg(null)
+                            }}
+                            className="w-full mt-4 py-2 bg-gray-200 rounded-xl"
+                        >
+                            Cancel
+                        </button>
+                    </div>  
                 </div>
             )}
         </MobileLayout>

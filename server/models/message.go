@@ -18,6 +18,7 @@ type Message struct {
 	IsEdited 		bool 		`gorm:"default:false"`
 	EditedAt 		*time.Time
 	IsDeleted 		bool		`gorm:"default:false"`
+	Reaction		string		`gorm:"size:20"`
 }
 
 type SendMessageRequest struct {

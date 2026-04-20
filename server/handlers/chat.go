@@ -66,7 +66,7 @@ func SendMessage(c *gin.Context) {
 		SenderID:   sender.ID,
 		ReceiverID: receiver.ID,
 		Content:    req.Content,
-		ImageURL: req.ImageURL,
+		ImageURL:   req.ImageURL,
 	}
 
 	config.DB.Create(&msg)
@@ -130,8 +130,8 @@ func GetMessages(c *gin.Context) {
 func EditMessage(c *gin.Context) {
 	me, ok := getCurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized,gin.H{
-			"message":"Unauthorized",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
 		})
 		return
 	}
@@ -143,8 +143,8 @@ func EditMessage(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{
-			"message":"Invalid Data",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid Data",
 		})
 		return
 	}
@@ -159,40 +159,40 @@ func EditMessage(c *gin.Context) {
 
 	var msg models.Message
 	if err := config.DB.First(&msg, id).Error; err != nil {
-		c.JSON(http.StatusNotFound,gin.H{
-			"message":"Message Not Found",
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Message Not Found",
 		})
 		return
 	}
 
 	if msg.SenderID != me.ID {
-		c.JSON(http.StatusForbidden,gin.H{
-			"message":"Forbidden",
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Forbidden",
 		})
 		return
 	}
 
 	if msg.IsDeleted {
-		c.JSON(http.StatusBadRequest,gin.H{
-			"message":"Cannot edit deleted message",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cannot edit deleted message",
 		})
 	}
 
 	now := time.Now()
 
 	if err := config.DB.Model(&msg).Updates(map[string]interface{}{
-		"content": req.Content,
+		"content":   req.Content,
 		"is_edited": true,
 		"edited_at": &now,
 	}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{
-			"message":"Failed to Edit",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to Edit",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK,gin.H{
-		"message":"Message Updated",
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Message Updated",
 	})
 
 }
@@ -258,8 +258,8 @@ func MarkSeen(c *gin.Context) {
 func DeleteMessage(c *gin.Context) {
 	me, ok := getCurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized,gin.H{
-			"message":"Unauthorized",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
 		})
 		return
 	}
@@ -268,41 +268,89 @@ func DeleteMessage(c *gin.Context) {
 
 	var msg models.Message
 	if err := config.DB.First(&msg, id).Error; err != nil {
-		c.JSON(http.StatusNotFound,gin.H{
-			"message":"Message Not Found",
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Message Not Found",
 		})
 		return
 	}
 
 	if msg.SenderID != me.ID {
-		c.JSON(http.StatusForbidden,gin.H{
-			"message":"Forbidden",
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Forbidden",
 		})
 		return
 	}
 
 	if msg.IsDeleted {
-		c.JSON(http.StatusBadRequest,gin.H{
-			"message":"Alreay Deleted",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Alreay Deleted",
 		})
 		return
 	}
 
 	err := config.DB.Model(&msg).Updates(map[string]interface{}{
-		"content": "",
-		"image_url": "",
+		"content":    "",
+		"image_url":  "",
 		"is_deleted": true,
-		"is_edited": false,
-		"edited_at":nil,
+		"is_edited":  false,
+		"edited_at":  nil,
 	}).Error
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{
-			"message":"Failed to delete",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to delete",
 		})
 		return
 	}
-	c.JSON(http.StatusOK,gin.H{
-		"message":"Message Deleted Successfully",
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Message Deleted Successfully",
+	})
+}
+
+func ReactMessage(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	id := c.Param("id")
+
+	var req struct {
+		Emoji string `json:"emoji"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid Data",
+		})
+		return
+	}
+
+	var msg models.Message
+	if err := config.DB.First(&msg, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "message not found",
+		})
+		return
+	}
+	if me.ID != msg.SenderID && me.ID != msg.ReceiverID {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Forbidden",
+		})
+		return
+	}
+
+	if err := config.DB.Model(&msg).Update("reaction", req.Emoji).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to add reaction",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Reaction Added",
 	})
 }
