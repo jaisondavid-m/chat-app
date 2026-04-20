@@ -217,7 +217,7 @@ function Chat() {
         pressTimer.current = setTimeout(() => {
             setActionMsg(msg)
             setShowActions(true)
-        }, 400);
+        }, 1000);
     }
 
     const cancelPress = () => {
@@ -260,6 +260,17 @@ function Chat() {
             console.error(err)
         }
     }
+
+    useEffect(() => {
+        const close = (e) => {
+            if (e.key === "Escape") {
+                setShowActions(false)
+                setEditingId(null)
+            }
+        }
+        window.addEventListener("keydown",close)
+        return () => window.removeEventListener("keydown",close)
+    },[])
 
     return (
         <MobileLayout>
@@ -526,17 +537,22 @@ function Chat() {
                 )}
             </div>
             {showActions && (
-                <div className="fixed inset-0 bg-black/30 flex items-end justify-center z-50">
-                    <div className="bg-white w-full max-w-sm rounded-t-2xl p-4 space-y-3">
+                <div
+                 className="fixed inset-0 bg-black/30 flex items-end justify-center z-50"
+                 onClick={() => setShowActions(false)}
+                >
+                    <div className="bg-white w-full max-w-sm rounded-t-2xl p-4 space-y-3 animate-slideUp"
+                         onClick={(e) => e.stopPropagation()}
+                    >
                         <button
                             onClick={openEdit}
-                            className="w-full py-3 rounded-xl bg-gray-100"
+                            className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-[0.98] transition"
                         >
                             Edit Message
                         </button>
                         <button
                             onClick={deleteMessage}
-                            className="w-full py-3 rounded-xl bg-red-500 text-white"
+                            className="w-full py-3 rounded-xl bg-red-500 text-white hover:opacity-90 active:scale-[0.98] transition"
                         >
                             Delete Message
                         </button>
@@ -550,8 +566,10 @@ function Chat() {
                 </div>
             )}
             {editingId && (
-                <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-                    <div className="bg-white p-4 rounded-2xl w-[90%] max-w-sm sapce-y-3">
+                <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setEditingId(null)}>
+                    <div className="bg-white flex flex-col gap-y-4 p-4 rounded-2xl w-[90%] max-w-sm space-y-3"
+                     onClick={(e) => e.stopPropagation()}
+                    >
                         <h2 className="font-semibold">Edit Message</h2>
                         <input
                             value={editText}
