@@ -25,6 +25,11 @@ function Chat() {
     const [showList, setShowList] = useState(true)
     const [image, setImage] = useState(null)
     const [presence, setPresence] = useState({})
+    const [actionMsg, setActionMsg] = useState(null)
+    const [showActions, setShowActions] = useState(false)
+    const [editingId, setEditingId] = useState(null)
+    const [editText, setEditText] = useState("")
+    const pressTimer = useRef(null)
 
     const loadFriends = async () => {
         try {
@@ -208,6 +213,54 @@ function Chat() {
         setTyping(false)
     }
 
+    const startPress = (msg) => {
+        pressTimer.current = setTimeout(() => {
+            setActionMsg(msg)
+            setShowActions(true)
+        }, 400);
+    }
+
+    const cancelPress = () => {
+        clearTimeout(pressTimer.current)
+    }
+
+    const openEdit = () => {
+        setEditingId(actionMsg.ID)
+        setEditText(actionMsg.Content)
+        setShowActions(false)
+    }
+
+    const saveEdit = async () => {
+        try {
+            await api.put(`/auth/chat/message/${editingId}`, {
+                content: editText,
+            })
+            socket.current?.send(JSON.stringify({
+                type: "message",
+                to: email,
+            }))
+            setEditingId(null)
+            setEditText("")
+            loadMessages(email)
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
+    const deleteMessage = async () => {
+        try {
+            await api.put(`/auth/chat/message/delete/${actionMsg.ID}`)
+            socket.current?.send(JSON.stringify({
+                type: "message",
+                to: email,
+            }))
+            setShowActions(false)
+            loadMessages(email)
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
     return (
         <MobileLayout>
             <div className="flex flex-col h-full bg-gray-100 overflow-hidden">
@@ -354,18 +407,30 @@ function Chat() {
                                     const lastMsg = messages.at(-1)
                                     const isLastMessage = msg.ID === lastMsg?.ID
                                     return (
-                                        <>
+                                        <React.Fragment key={msg.ID}>
                                             <div
-                                                key={msg.ID}
+                                                // key={msg.ID}
                                                 className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                                             >
                                                 <div
+                                                    onMouseDown={() => isMe && startPress(msg)}
+                                                    onMouseUp={cancelPress}
+                                                    onMouseLeave={cancelPress}
+                                                    onTouchStart={() => isMe && startPress(msg)}
+                                                    onTouchEnd={cancelPress}
                                                     className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow wrap-break-word ${isMe
                                                         ? "bg-purple-600 text-white rounded-br-md"
                                                         : "bg-white text-gray-800 rounded-bl-md"
                                                         }`}
                                                 >
-                                                    {msg.Content && <p>{msg.Content}</p>}
+                                                    {msg.Content ? (
+                                                        <p>{msg.Content}</p>
+                                                    ) : (
+                                                        <p className="italic opacity-70">Message deleted</p>
+                                                    )}
+                                                    {msg.IsEdited && msg.Content && (
+                                                        <p className="text-[10px] opacity-70 mt-1">(edited)</p>
+                                                    )}
                                                     {msg.ImageURL && (
                                                         <img
                                                             src={msg.ImageURL}
@@ -380,7 +445,7 @@ function Chat() {
                                                     Seen ✓
                                                 </div>
                                             )}
-                                        </>
+                                        </React.Fragment>
                                     )
                                 })
                             )}
@@ -460,6 +525,56 @@ function Chat() {
                     </>
                 )}
             </div>
+            {showActions && (
+                <div className="fixed inset-0 bg-black/30 flex items-end justify-center z-50">
+                    <div className="bg-white w-full max-w-sm rounded-t-2xl p-4 space-y-3">
+                        <button
+                            onClick={openEdit}
+                            className="w-full py-3 rounded-xl bg-gray-100"
+                        >
+                            Edit Message
+                        </button>
+                        <button
+                            onClick={deleteMessage}
+                            className="w-full py-3 rounded-xl bg-red-500 text-white"
+                        >
+                            Delete Message
+                        </button>
+                        <button
+                            onClick={() => setShowActions(false)}
+                            className="w-full py-3 rounded-xl bg-gray-200"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+            {editingId && (
+                <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+                    <div className="bg-white p-4 rounded-2xl w-[90%] max-w-sm sapce-y-3">
+                        <h2 className="font-semibold">Edit Message</h2>
+                        <input
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            className="w-full border px-3 py-2 rounded-xl"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={saveEdit}
+                                className="flex-1 bg-purple-600 text-white px-3 py-2 rounded-xl"
+                            >
+                                Save
+                            </button>
+                            <button
+                                onClick={() => setEditingId(null)}
+                                className="flex-1 bg-red-600 text-white py-2 rounded-xl"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </MobileLayout>
 
     )
