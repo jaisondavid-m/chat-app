@@ -681,9 +681,9 @@ function Chat() {
                                                         <>
                                                             {msg.Content ? (
                                                                 <p>{renderMessageWithLinks(msg.Content)}</p>
-                                                            ) : (
+                                                            ) : msg.IsDeleted ? (
                                                                 <p className="italic opacity-70">Message Deleted</p>
-                                                            )}
+                                                            ) : null}
                                                             {msg.IsEdited && msg.Content && (
                                                                 <p className="text-[10px] opacity-70 mt-1">(edited)</p>
                                                             )}
