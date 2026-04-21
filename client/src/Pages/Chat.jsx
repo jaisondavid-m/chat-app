@@ -62,6 +62,11 @@ function Chat() {
                 await api.put(`/auth/messages/seen/${targetEmail}`)
                 const updated = await api.get(`/auth/chat/message/${targetEmail}`)
                 setMessages(updated.data.messages || [])
+                setUnreadChats((prev) => {
+                    const updated = { ...prev }
+                    delete updated[targetEmail]
+                    return updated
+                })
                 socket.current?.send(
                     JSON.stringify({
                         type: "seen",
@@ -126,12 +131,12 @@ function Chat() {
             if (data.type === "message") {
                 // setMessages((prev) => [...prev, data])
                 // loadMessages(normalizedEmail)
-                if (!showList && normalizedEmail === data.from) {
+                if (!showList && email === data.from) {
                     loadMessages(normalizedEmail)
                 } else {
                     setUnreadChats((prev) => ({
                         ...prev,
-                        [data.from]: true
+                        [data.from]: (prev[data.from] || 0) + 1
                     }))
                 }
             }
@@ -178,6 +183,15 @@ function Chat() {
                 fileInputRef.current.value = ""
             }
             await loadMessages(email)
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
+    const loadUnreadChats = async () => {
+        try {
+            const res = await api.get('/auth/messages/unread-counts')
+            setUnreadChats(res.data.counts || {})
         } catch (err) {
             console.error(err)
         }
@@ -253,6 +267,7 @@ function Chat() {
 
     useEffect(() => {
         loadFriends()
+        loadUnreadChats()
         const initialEmail = (searchParams.get("email") || "").trim()
         if (!initialEmail || !user?.Email) return
         startChat(initialEmail)
@@ -347,6 +362,7 @@ function Chat() {
                         type: "message",
                         from: user?.Email,
                         to: email,
+                        is_location: true
                     })
                 )
                 loadMessages(email);
@@ -442,11 +458,17 @@ function Chat() {
                                                 <p className="text-sm text-gray-400">
                                                     {friend.Email}
                                                 </p>
-                                                {unreadChats[friend.Email] ? (
+                                                {unreadChats[friend.Email] > 0 ? (
                                                     <div className="flex items-center gap-1">
                                                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                                                         <span className="text-xs text-green-600 font-medium">
-                                                            New Message(s)
+                                                            {/* New Message(s) */}
+                                                            {unreadChats[friend.Email] > 99
+                                                                ? "99+"
+                                                                : unreadChats[friend.Email] >= 3
+                                                                    ? "3+ New Messages"
+                                                                    : `${unreadChats[friend.Email]} New Message`
+                                                            }
                                                         </span>
                                                     </div>
                                                 ) : (

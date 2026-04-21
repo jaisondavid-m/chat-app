@@ -9,11 +9,12 @@ import (
 type Message struct {
 
 	gorm.Model
+	ID 				uint		`gorm:"primaryKey"`
 	SenderID 		uint		`gorm:"not null"`
 	ReceiverID 		uint		`gorm:"not null"`
 	Content 		string 		`gorm:"type:text;not null"`
 	ImageURL		string		`gorm:"type:text"`
-	IsRead 			bool 		`gorm:"default:false"`
+	IsRead 			bool 		`gorm:"index"`
 	ReadAt			*time.Time
 	IsEdited 		bool 		`gorm:"default:false"`
 	EditedAt 		*time.Time

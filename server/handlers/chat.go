@@ -358,3 +358,37 @@ func ReactMessage(c *gin.Context) {
 		"message": "Reaction Added",
 	})
 }
+
+func GetUnReadCounts(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Unauthorized",
+		})
+		return
+	}
+
+	type Result struct {
+		SenderID	uint
+		Count		int
+	}
+
+	var results []Result
+
+	config.DB.Model(&models.Message{}).
+		Select("sender_id, COUNT(*) as count").
+		Where("receiver_id = ? AND is_read = ?",me.ID, false).
+		Group("sender_id").Scan(&results)
+
+	counts := gin.H{}
+
+	for _,r := range results {
+		var user models.User
+		config.DB.First(&user, r.SenderID)
+		counts[user.Email] = r.Count
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"counts":counts,
+	})
+}
