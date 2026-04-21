@@ -80,6 +80,20 @@ function Chat() {
         }
     }
 
+    const sendBrowserNotification = (title, body, icon = "") => {
+        if (!("Notification" in window)) return
+        if (Notification.permission === "granted") {
+            const notification = new Notification(title, {
+                body,
+                icon: icon || "/icons.svg",
+                badge: icon || "/icons.svg"
+            })
+            notification.onclick = () => {
+                window.focus()
+            }
+        }
+    }
+
     const uploadImage = async (file) => {
         const formData = new FormData()
         formData.append("image", file)
@@ -131,13 +145,22 @@ function Chat() {
             if (data.type === "message") {
                 // setMessages((prev) => [...prev, data])
                 // loadMessages(normalizedEmail)
-                if (!showList && email === data.from) {
-                    loadMessages(normalizedEmail)
-                } else {
+                if (showList || email !== data.from) {
+                    sendBrowserNotification(
+                        "New Message",
+                        `${data.from} sent you a message`
+                    )
                     setUnreadChats((prev) => ({
                         ...prev,
                         [data.from]: (prev[data.from] || 0) + 1
                     }))
+                    
+                } else {
+                    // setUnreadChats((prev) => ({
+                    //     ...prev,
+                    //     [data.from]: (prev[data.from] || 0) + 1
+                    // }))
+                    loadMessages(normalizedEmail)
                 }
             }
             if (data.type === "typing") {
@@ -402,6 +425,12 @@ function Chat() {
         document.addEventListener("mousedown", handleClickOutside)
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [showEmojiPicker])
+
+    useEffect(() => {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission()
+        }
+    },[])
 
     const insertEmoji = (emoji) => {
         const input = messageInputRef.current
