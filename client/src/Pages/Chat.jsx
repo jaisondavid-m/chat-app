@@ -38,6 +38,7 @@ function Chat() {
     const [showReactionModal, setShowReactionModal] = useState(false)
     const [showLocationDenied, setShowLocationDenied] = useState(false)
     const [showLocationConfirm, setShowLocationConfirm] = useState(false)
+    const [unreadChats, setUnreadChats] = useState({})
 
     const loadFriends = async () => {
         try {
@@ -99,6 +100,11 @@ function Chat() {
         const normalizedEmail = (targetEmail || "").trim()
         if (!normalizedEmail) return
         setEmail(normalizedEmail)
+        setUnreadChats((prev) => {
+            const updated = { ...prev }
+            delete updated[normalizedEmail]
+            return updated
+        })
         const friend = friends.find(f => f.Email === normalizedEmail)
         setSelectedFriend(friend || null)
         setChatStarted(true)
@@ -119,7 +125,15 @@ function Chat() {
             const data = JSON.parse(event.data)
             if (data.type === "message") {
                 // setMessages((prev) => [...prev, data])
-                loadMessages(normalizedEmail)
+                // loadMessages(normalizedEmail)
+                if (!showList && normalizedEmail === data.from) {
+                    loadMessages(normalizedEmail)
+                } else {
+                    setUnreadChats((prev) => ({
+                        ...prev,
+                        [data.from]: true
+                    }))
+                }
             }
             if (data.type === "typing") {
                 setTyping(true)
@@ -320,7 +334,7 @@ function Chat() {
                 const latitude = position.coords.latitude
                 const longitude = position.coords.longitude
 
-                await api.post("/auth/chat/send",{
+                await api.post("/auth/chat/send", {
                     email: email,
                     content: "",
                     image_url: "",
@@ -428,18 +442,28 @@ function Chat() {
                                                 <p className="text-sm text-gray-400">
                                                     {friend.Email}
                                                 </p>
-                                                <span className="text-xs">
-                                                    {presence[friend.Email]?.online ? (
-                                                        <span className="text-green-500">● Online</span>
-                                                    ) : (
-                                                        <span className="text-gray-400">
-                                                            Last Seen{" "}
-                                                            {presence[friend.Email]?.last_seen
-                                                                ? new Date(presence[friend.Email].last_seen).toLocaleTimeString()
-                                                                : "recently"}
+                                                {unreadChats[friend.Email] ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                        <span className="text-xs text-green-600 font-medium">
+                                                            New Message(s)
                                                         </span>
-                                                    )}
-                                                </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs">
+                                                        {presence[friend.Email]?.online ? (
+                                                            <span className="text-green-500">● Online</span>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                Last Seen{" "}
+                                                                {presence[friend.Email]?.last_seen
+                                                                    ? new Date(presence[friend.Email].last_seen).toLocaleTimeString()
+                                                                    : "recently"}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                )}
+
                                             </div>
 
                                         </div>
@@ -554,7 +578,7 @@ function Chat() {
                                                     onMouseLeave={cancelPress}
                                                     onTouchStart={() => isMe && startPress(msg)}
                                                     onTouchEnd={cancelPress}
-                                                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow break-word peer ${isMe
+                                                    className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow break-word peer ${isMe
                                                         ? "bg-purple-600 text-white rounded-br-md"
                                                         : "bg-white text-gray-800 rounded-bl-md"
                                                         }`}
@@ -564,9 +588,8 @@ function Chat() {
                                                             href={`https://www.google.com/maps?q=${msg.Latitude},${msg.Longitude}`}
                                                             target="_blank"
                                                             rel="noreferrer"
-                                                            className={`underline font-medium ${
-                                                                isMe ? "text-white" : "text-blue-600"
-                                                            }`}
+                                                            className={`underline font-medium ${isMe ? "text-white" : "text-blue-600"
+                                                                }`}
                                                         >
                                                             Shared Location
                                                         </a>
@@ -583,7 +606,7 @@ function Chat() {
                                                             {msg.ImageURL && (
                                                                 <img
                                                                     src={msg.ImageURL}
-                                                                    alt="sent" 
+                                                                    alt="sent"
                                                                     className="mt-2 rounded-lg max-w-full"
                                                                 />
                                                             )}
@@ -646,9 +669,8 @@ function Chat() {
                                                     ))}
                                                 </div> */}
                                                 {msg.Reaction && (
-                                                    <div className={`absolute -bottom-3 text-sm bg-white px-2 rounded-full shadow ${
-                                                        isMe ? "right-2" : "left-2"
-                                                    }`}>
+                                                    <div className={`absolute -bottom-3 text-sm bg-white px-2 rounded-full shadow ${isMe ? "right-2" : "left-2"
+                                                        }`}>
                                                         {msg.Reaction}
                                                     </div>
                                                 )}
@@ -690,19 +712,19 @@ function Chat() {
                             <div className="flex items-center gap-2">
                                 <div>
                                     <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    hidden
-                                    id="chat-image-upload"
-                                    onChange={(e) => setImage(e.target.files?.[0] || null)}
-                                />
-                                <label
-                                    htmlFor="chat-image-upload"
-                                    className="px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 cursor-pointer hover:bg-gray-50"
-                                >
-                                    Add Image
-                                </label>
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        hidden
+                                        id="chat-image-upload"
+                                        onChange={(e) => setImage(e.target.files?.[0] || null)}
+                                    />
+                                    <label
+                                        htmlFor="chat-image-upload"
+                                        className="px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 cursor-pointer hover:bg-gray-50"
+                                    >
+                                        Add Image
+                                    </label>
                                 </div>
                                 <button
                                     // onClick={shareLocation}
@@ -710,7 +732,7 @@ function Chat() {
                                     className="p-2 rounded-xl border border-gray-200 hover:bg-gray-100 text-purple-600 text-xl"
                                 >
                                     {/* 📍 */}
-                                    <IoLocationSharp/>
+                                    <IoLocationSharp />
                                 </button>
                             </div>
                             <div className="relative flex gap-0.5">
@@ -835,7 +857,7 @@ function Chat() {
                 </div>
             )}
             {showReactionModal && reactionMsg && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black/30 flex items-end justify-center z-50"
                     onClick={() => {
                         setShowReactionModal(false)
@@ -871,7 +893,7 @@ function Chat() {
                         >
                             Cancel
                         </button>
-                    </div>  
+                    </div>
                 </div>
             )}
             {showLocationDenied && (
