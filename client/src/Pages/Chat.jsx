@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
+import { IoLocationSharp } from "react-icons/io5"
 import { useAuth } from "../context/AuthContext"
 import api from "../api/axios"
 import MobileLayout from "../Components/MobileLayout"
@@ -35,6 +36,8 @@ function Chat() {
     const emojiPickerRef = useRef(null)
     const [reactionMsg, setReactionMsg] = useState(null)
     const [showReactionModal, setShowReactionModal] = useState(false)
+    const [showLocationDenied, setShowLocationDenied] = useState(false)
+    const [showLocationConfirm, setShowLocationConfirm] = useState(false)
 
     const loadFriends = async () => {
         try {
@@ -311,6 +314,36 @@ function Chat() {
         }
     }
 
+    const shareLocation = () => {
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const latitude = position.coords.latitude
+                const longitude = position.coords.longitude
+
+                await api.post("/auth/chat/send",{
+                    email: email,
+                    content: "",
+                    image_url: "",
+                    latitude: latitude,
+                    longitude: longitude,
+                    is_location: true,
+                })
+                socket.current?.send(
+                    JSON.stringify({
+                        type: "message",
+                        from: user?.Email,
+                        to: email,
+                    })
+                )
+                loadMessages(email);
+            },
+            () => {
+                // alert("Location permission denied")
+                setShowLocationDenied(true)
+            }
+        )
+    }
+
     useEffect(() => {
         const close = (e) => {
             if (e.key === "Escape") {
@@ -521,12 +554,42 @@ function Chat() {
                                                     onMouseLeave={cancelPress}
                                                     onTouchStart={() => isMe && startPress(msg)}
                                                     onTouchEnd={cancelPress}
-                                                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow wrap-break-word peer ${isMe
+                                                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow break-word peer ${isMe
                                                         ? "bg-purple-600 text-white rounded-br-md"
                                                         : "bg-white text-gray-800 rounded-bl-md"
                                                         }`}
                                                 >
-                                                    {msg.Content ? (
+                                                    {msg.IsLocation ? (
+                                                        <a
+                                                            href={`https://www.google.com/maps?q=${msg.Latitude},${msg.Longitude}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className={`underline font-medium ${
+                                                                isMe ? "text-white" : "text-blue-600"
+                                                            }`}
+                                                        >
+                                                            Shared Location
+                                                        </a>
+                                                    ) : (
+                                                        <>
+                                                            {msg.Content ? (
+                                                                <p>{renderMessageWithLinks(msg.Content)}</p>
+                                                            ) : (
+                                                                <p className="italic opacity-70">Message Deleted</p>
+                                                            )}
+                                                            {msg.IsEdited && msg.Content && (
+                                                                <p className="text-[10px] opacity-70 mt-1">(edited)</p>
+                                                            )}
+                                                            {msg.ImageURL && (
+                                                                <img
+                                                                    src={msg.ImageURL}
+                                                                    alt="sent" 
+                                                                    className="mt-2 rounded-lg max-w-full"
+                                                                />
+                                                            )}
+                                                        </>
+                                                    )}
+                                                    {/* {msg.Content ? (
                                                         <p>{renderMessageWithLinks(msg.Content)}</p>
                                                     ) : (
                                                         <p className="italic opacity-70">Message deleted</p>
@@ -541,6 +604,31 @@ function Chat() {
                                                             className="mt-2 rounded-lg max-w-full"
                                                         />
                                                     )}
+                                                    {msg.Is_Location ? (
+                                                        <a
+                                                            href={`https://www.google.com/map?q=${msg.Latitude},${msg.Longitude}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="underline text-white"
+                                                        >
+                                                            Share Location
+                                                        </a>
+                                                    ) : 
+                                                        msg.Content ? (
+                                                            <p>{renderMessageWithLinks(msg.Content)}</p>
+                                                        ) : (
+                                                        <p className="italic opacity-75">Message Deleted</p>
+                                                    )}
+                                                    {msg.IsEdited && msg.Content && (
+                                                        <p className="text-[10px] opacity-70 mt-1">(edited)</p>
+                                                    )}
+                                                    {msg.ImageURL && (
+                                                        <img
+                                                            src={msg.ImageURL}
+                                                            alt="sent"
+                                                            className="mt-2 rounded-lg max-w-full"
+                                                        />
+                                                    )} */}
                                                 </div>
                                                 {/* <div className={`opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto peer-hover:opacity-100 peer-hover:pointer-events-auto hover:opacity-100 hover:pointer-events-auto transition-all duration-150
                                                     flex gap-1 flex-wrap absolute -top-10 z-20 ${
@@ -600,7 +688,8 @@ function Chat() {
                                 </div>
                             )}
                             <div className="flex items-center gap-2">
-                                <input
+                                <div>
+                                    <input
                                     ref={fileInputRef}
                                     type="file"
                                     accept="image/*"
@@ -614,6 +703,15 @@ function Chat() {
                                 >
                                     Add Image
                                 </label>
+                                </div>
+                                <button
+                                    // onClick={shareLocation}
+                                    onClick={() => setShowLocationConfirm(true)}
+                                    className="p-2 rounded-xl border border-gray-200 hover:bg-gray-100 text-purple-600 text-xl"
+                                >
+                                    {/* 📍 */}
+                                    <IoLocationSharp/>
+                                </button>
                             </div>
                             <div className="relative flex gap-0.5">
                                 {/* <div className="relative">
@@ -774,6 +872,69 @@ function Chat() {
                             Cancel
                         </button>
                     </div>  
+                </div>
+            )}
+            {showLocationDenied && (
+                <div
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+                    onClick={() => setShowLocationDenied(false)}
+                >
+                    <div
+                        className="bg-white w-[90%] max-w-sm rounded-2xl p-5 space-y-4 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2
+                            className="text-lg font-semibold text-red-500"
+                        >
+                            Location Access Denied
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                            Please allow location permission in your browser setting to share your location.
+                        </p>
+                        <button
+                            onClick={() => setShowLocationDenied(false)}
+                            className="w-full py-2 bg-purple-600 text-white rounded-xl"
+                        >
+                            Ok
+                        </button>
+                    </div>
+                </div>
+            )}
+            {showLocationConfirm && (
+                <div
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+                    onClick={() => setShowLocationConfirm(false)}
+                >
+                    <div
+                        className="bg-white w-[90%] max-w-sm rounded-2xl p-5 space-y-4 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2
+                            className="text-lg font-semibold text-purple-600"
+                        >
+                            Share Location ?
+                        </h2>
+                        <p>
+                            Are You Sure want to share your current Location with this User ?
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowLocationConfirm(false)}
+                                className="flex-1 py-2 bg-gray-200 rounded-xl"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowLocationConfirm(false)
+                                    shareLocation()
+                                }}
+                                className="flex-1 py-2 bg-purple-600 text-white rounded-xl"
+                            >
+                                Share
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </MobileLayout>

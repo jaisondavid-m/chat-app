@@ -19,10 +19,16 @@ type Message struct {
 	EditedAt 		*time.Time
 	IsDeleted 		bool		`gorm:"default:false"`
 	Reaction		string		`gorm:"size:20"`
+	Latitude		float64		`gorm:"default:0"`
+	Longitude		float64		`gorm:"default:0"`
+	IsLocation		bool		`gorm:"default:false"`
 }
 
 type SendMessageRequest struct {
 	Email 		string 		`json:"email"`
 	Content		string 		`json:"content"`
 	ImageURL 	string 		`json:"image_url"`
+	Latitude	float64		`json:"latitude"`
+	Longitude	float64		`json:"longitude"`
+	IsLocation	bool		`json:"is_location"`
 }

@@ -67,6 +67,9 @@ func SendMessage(c *gin.Context) {
 		ReceiverID: receiver.ID,
 		Content:    req.Content,
 		ImageURL:   req.ImageURL,
+		Latitude:   req.Latitude,
+		Longitude:  req.Longitude,
+		IsLocation: req.IsLocation,
 	}
 
 	config.DB.Create(&msg)
@@ -294,6 +297,7 @@ func DeleteMessage(c *gin.Context) {
 		"is_deleted": true,
 		"is_edited":  false,
 		"edited_at":  nil,
+		"emoji":nil,
 	}).Error
 
 	if err != nil {
