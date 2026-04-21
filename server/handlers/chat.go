@@ -70,6 +70,7 @@ func SendMessage(c *gin.Context) {
 		Latitude:   req.Latitude,
 		Longitude:  req.Longitude,
 		IsLocation: req.IsLocation,
+		IsViewOnce: req.IsViewOnce,
 	}
 
 	config.DB.Create(&msg)
@@ -391,4 +392,44 @@ func GetUnReadCounts(c *gin.Context) {
 	c.JSON(http.StatusOK,gin.H{
 		"counts":counts,
 	})
+}
+
+func MarkImageViewed(c *gin.Context) {
+	me, ok := getCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Unauthorized",
+		})
+		return
+	}
+
+	id := c.Param("id")
+
+	var msg models.Message
+	if err := config.DB.First(&msg,id).Error; err != nil {
+		c.JSON(http.StatusNotFound,gin.H{
+			"message":"Not Found",
+		})
+		return
+	}
+
+	if msg.ReceiverID != me.ID {
+		c.JSON(http.StatusForbidden,gin.H{
+			"message" : "Forbidden",
+		})
+		return
+	}
+
+	if msg.IsViewOnce && msg.ViewedAt == nil {
+		now := time.Now()
+		config.DB.Model(&msg).Updates(map[string]interface{}{
+			"viewed_at":&now,
+			"image_url": "",
+		})
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"message":"success",
+	})
+	
 }

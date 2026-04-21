@@ -34,11 +34,13 @@ function Chat() {
     const pressTimer = useRef(null)
     const messageInputRef = useRef(null)
     const emojiPickerRef = useRef(null)
+    const viewedMessages = useRef(new Set())
     const [reactionMsg, setReactionMsg] = useState(null)
     const [showReactionModal, setShowReactionModal] = useState(false)
     const [showLocationDenied, setShowLocationDenied] = useState(false)
     const [showLocationConfirm, setShowLocationConfirm] = useState(false)
     const [unreadChats, setUnreadChats] = useState({})
+    const [isViewOnce, setIsViewOnce] = useState(false)
 
     const loadFriends = async () => {
         try {
@@ -56,7 +58,13 @@ function Chat() {
         try {
             const res = await api.get(`/auth/chat/message/${targetEmail}`)
             const msgs = res.data.messages || []
-            setMessages(msgs)
+            const normalized = msgs.map(m => {
+                if (m.IsViewOnce && m.ViewedAt) {
+                    return { ...m, ImageURL: "" }
+                }
+                return m
+            })
+            setMessages(normalized)
             const last = msgs[msgs.length - 1]
             if (last && last.SenderID !== user.ID) {
                 await api.put(`/auth/messages/seen/${targetEmail}`)
@@ -154,7 +162,7 @@ function Chat() {
                         ...prev,
                         [data.from]: (prev[data.from] || 0) + 1
                     }))
-                    
+
                 } else {
                     // setUnreadChats((prev) => ({
                     //     ...prev,
@@ -190,6 +198,7 @@ function Chat() {
                 email,
                 content: message,
                 image_url: imageUrl,
+                is_view_once: isViewOnce,
             })
             socket.current?.send(
                 JSON.stringify({
@@ -197,11 +206,13 @@ function Chat() {
                     from: user?.Email,
                     to: email,
                     content: message,
-                    image: imageUrl
+                    image: imageUrl,
+                    is_view_once: isViewOnce
                 })
             )
             setMessage("")
             setImage(null)
+            setIsViewOnce(false)
             if (fileInputRef.current) {
                 fileInputRef.current.value = ""
             }
@@ -310,6 +321,28 @@ function Chat() {
 
         return () => clearInterval(interval)
     }, [friends])
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            async (entries) => {
+                for (const entry of entries) {
+                    if (entry.isIntersecting) {
+                        const msgId = entry.target.getAttribute("data-id")
+                        const msgViewOnce = entry.target.getAttribute("data-viewonce")
+
+                        if (msgViewOnce === "true" && !viewedMessages.current.has(msgId)) {
+                            viewedMessages.current.add(msgId)
+                            await api.put(`/auth/chat/message/view/${msgId}`)
+                        }
+                    }
+                }
+            },
+            { threshold: 0.7 }
+        )
+        const elements = document.querySelectorAll(".view-once-msg")
+        elements.forEach((el) => observer.observe(el))
+        return () => observer.disconnect()
+    }, [messages])
 
     const goBackToList = () => {
         setShowList(true)
@@ -430,7 +463,7 @@ function Chat() {
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission()
         }
-    },[])
+    }, [])
 
     const insertEmoji = (emoji) => {
         const input = messageInputRef.current
@@ -654,12 +687,31 @@ function Chat() {
                                                             {msg.IsEdited && msg.Content && (
                                                                 <p className="text-[10px] opacity-70 mt-1">(edited)</p>
                                                             )}
-                                                            {msg.ImageURL && (
-                                                                <img
-                                                                    src={msg.ImageURL}
-                                                                    alt="sent"
-                                                                    className="mt-2 rounded-lg max-w-full"
-                                                                />
+                                                            {msg.ImageURL && !msg.ViewedAt && (
+                                                                <div>
+                                                                    {msg.IsViewOnce && (
+                                                                        <span className="text-[10px] bg-red-500 text-white px-2 oy-0.5 rounded-full">
+                                                                            View Once
+                                                                        </span>
+                                                                    )}
+                                                                    <img
+                                                                        src={msg.ImageURL}
+                                                                        alt="sent"
+                                                                        data-id={msg.ID}
+                                                                        data-viewonce={msg.IsViewOnce}
+                                                                        className="view-once-msg mt-2 rounded-lg max-w-full"
+                                                                    // onLoad={async () => {
+                                                                    //     if (msg.IsViewOnce && !msg.ViewedAt && msg.ReceiverID === user?.ID) {
+                                                                    //         try {
+                                                                    //             await api.put(`/auth/chat/message/view/${msg.ID}`)
+                                                                    //         } catch (err) {
+                                                                    //             console.error(err)
+                                                                    //         }
+                                                                    //     }
+                                                                    // }}
+                                                                    />
+                                                                </div>
+
                                                             )}
                                                         </>
                                                     )}
@@ -761,7 +813,7 @@ function Chat() {
                                 </div>
                             )}
                             <div className="flex items-center gap-2">
-                                <div>
+                                <div className="flex gap-2">
                                     <input
                                         ref={fileInputRef}
                                         type="file"
@@ -775,6 +827,13 @@ function Chat() {
                                         className="px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 cursor-pointer hover:bg-gray-50"
                                     >
                                         Add Image
+                                    </label>
+                                    <label
+                                        htmlFor="chat-image-upload"
+                                        onClick={() => setIsViewOnce(true)}
+                                        className="px-3 py-2 border rounded-xl text-sm cursor-pointer bg-purple-500 text-white hover:opacity-80"
+                                    >
+                                        Add View Once Image
                                     </label>
                                 </div>
                                 <button

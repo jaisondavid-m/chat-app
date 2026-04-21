@@ -23,6 +23,8 @@ type Message struct {
 	Latitude		float64		`gorm:"default:0"`
 	Longitude		float64		`gorm:"default:0"`
 	IsLocation		bool		`gorm:"default:false"`
+	IsViewOnce		bool		`gorm:"default:false"`
+	ViewedAt		*time.Time
 }
 
 type SendMessageRequest struct {
@@ -32,4 +34,5 @@ type SendMessageRequest struct {
 	Latitude	float64		`json:"latitude"`
 	Longitude	float64		`json:"longitude"`
 	IsLocation	bool		`json:"is_location"`
+	IsViewOnce	bool 		`json:"is_view_once"`
 }
