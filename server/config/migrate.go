@@ -14,6 +14,10 @@ func Migrate() {
 		&models.Friend{},
 		&models.Block{},
 		&models.LockedChat{},
+		&models.Group{},
+		&models.GroupMember{},
+		&models.GroupMessage{},
+		&models.GroupMessageRead{},
 	)
 
 	if err != nil {

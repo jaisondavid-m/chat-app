@@ -42,6 +42,21 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/chat/lock/verify/:friendId",handlers.VerifyPin)
 		auth.DELETE("/chat/lock/:friendId",handlers.UnblockChat)
 		auth.GET("/chat/locks",handlers.GetLockedChats)
+		auth.POST("/group",handlers.CreateGroup)
+		auth.GET("/groups",handlers.GetMyGroups)
+		auth.GET("/group/:id",handlers.GetGroup)
+		auth.PUT("/group/:id",handlers.UpdateGroup)
+		auth.DELETE("/group/:id",handlers.DeleteGroup)
+		auth.POST("/group/:id/member",handlers.AddMember)
+		auth.DELETE("/group/:id/member/:userId")
+		auth.PUT("/group/:id/member/:userId/role",handlers.ChangeRole)
+		auth.POST("/group/:id/messages",handlers.SendGroupMessage)
+		auth.GET("/group/:id/messages",handlers.GetGroupMessages)
+		auth.PUT("/group/message/:id",handlers.EditGroupMessage)
+		auth.DELETE("/group/message/:id",handlers.DeleteGroupMessage)
+		auth.PUT("/group/message/:id/react",handlers.ReactGroupMessage)
+		auth.PUT("/group/:id/seen",handlers.MarkGroupSeen)
+		auth.GET("/group/:id/unread",handlers.GetGroupUnreadCount)
 	}
 
 	api.GET("/health",func(c *gin.Context) {
