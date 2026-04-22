@@ -38,6 +38,10 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/block/:id",handlers.BlockUser)
 		auth.DELETE("/unblock/:id",handlers.UnblockUser)
 		auth.GET("/blocks",handlers.GetBlockedUsers)
+		auth.POST("/chat/lock/:friendId",handlers.LockChat)
+		auth.POST("/chat/lock/verify/:friendId",handlers.VerifyPin)
+		auth.DELETE("/chat/lock/:friendId",handlers.UnblockChat)
+		auth.GET("/chat/locks",handlers.GetLockedChats)
 	}
 
 	api.GET("/health",func(c *gin.Context) {

@@ -41,6 +41,17 @@ function Chat() {
     const [showLocationConfirm, setShowLocationConfirm] = useState(false)
     const [unreadChats, setUnreadChats] = useState({})
     const [isViewOnce, setIsViewOnce] = useState(false)
+    const [lockedChats, setLockedChats] = useState(new Set())
+    const [showLockModal, setShowLockModal] = useState(false)
+    const [lockTarget, setLockTarget] = useState(null)
+    const [lockPin, setLockPin] = useState("")
+    const [lockMode, setLockMode] = useState("set")
+    const [lockError, setLockError] = useState("")
+    const [showPinEntry, setShowPinEntry] = useState(false)
+    const [pintEntryTarget, setPintEntryTarget] = useState(null)
+    const [pinEntryValue, setPinEntryValue] = useState("")
+    const [pinEntryError, setPinEntryError] = useState("")
+    const friendPressTimer = useRef(null)
 
     const loadFriends = async () => {
         try {
@@ -276,6 +287,73 @@ function Chat() {
         }
     }
 
+    const loadLockedChats = async () => {
+        try {
+            const res = await api.get("/auth/chat/locks")
+            setLockedChats(new Set(res.data.lockedFriendIds || []))
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
+    const startFriendPress = (friend) => {
+        friendPressTimer.current = setTimeout(() => {
+            setLockTarget(friend)
+            setLockMode(lockedChats.has(friend.ID) ? "remove" : "set")
+            setLockPin("")
+            setLockError("")
+            setShowLockModal(true)
+        }, 700)
+    }
+
+    const cancelFriendPress = () => clearTimeout(friendPressTimer.current)
+
+    const handleLockSubmit = async () => {
+        if (lockPin.length < 4) {
+            setLockError("PIN must be at least 4 digits")
+            return
+        }
+        try {
+            if (lockMode === "set") {
+                await api.post(`/auth/chat/lock/${lockTarget.ID}`, { pin: lockPin })
+                setLockedChats(prev => new Set([...prev, lockTarget.ID]))
+            } else {
+                await api.delete(`/auth/chat/lock/${lockTarget.ID}`, { data: { pin: lockPin } })
+                setLockedChats(prev => {
+                    const s = new Set(prev)
+                    s.delete(lockTarget.ID)
+                    return s
+                })
+            }
+            setShowLockModal(false)
+            setLockPin("")
+        } catch (err) {
+            setLockError(err.response?.data?.message || "Failed")
+        }
+    }
+
+    const handleFriendClick = (friend) => {
+        if (lockedChats.has(friend.ID)) {
+            setPintEntryTarget(friend)
+            setPinEntryValue("")
+            setPinEntryError("")
+            setShowPinEntry(true)
+        } else {
+            startChat(friend.Email)
+        }
+    }
+
+    const handlePinEntrySubmit = async () => {
+        try {
+            await api.post(`/auth/chat/lock/verify/${pintEntryTarget.ID}`, { pin: pinEntryValue })
+            setShowPinEntry(false)
+            startChat(pintEntryTarget.Email)
+        } catch (err) {
+            setPinEntryError("Wrong PIN. Try Again.")
+            setPinEntryValue("")
+        }
+    }
+
     // useEffect(() => {
     //     let interval
     //     if (chatStarted) {
@@ -302,6 +380,7 @@ function Chat() {
     useEffect(() => {
         loadFriends()
         loadUnreadChats()
+        loadLockedChats()
         const initialEmail = (searchParams.get("email") || "").trim()
         if (!initialEmail || !user?.Email) return
         startChat(initialEmail)
@@ -504,14 +583,30 @@ function Chat() {
                                 friends.map((friend) => (
                                     <button
                                         key={friend.ID}
-                                        onClick={() => startChat(friend.Email)}
+                                        onClick={() => handleFriendClick(friend)}
+                                        onMouseDown={() => startFriendPress(friend)}
+                                        onMouseUp={cancelFriendPress}
+                                        onMouseLeave={cancelFriendPress}
+                                        onTouchStart={(e) => {
+                                            e.preventDefault()
+                                            startFriendPress(friend)
+                                        }}
+                                        onTouchEnd={cancelFriendPress}
                                         className="flex w-full px-4 py-3 items-center gap-3 border-b hover:bg-gray-50 transition"
                                     >
-                                        <img
-                                            src={friend.Avatar}
-                                            alt=""
-                                            className={`w-12 h-12 rounded-full object-cover `}
-                                        />
+                                        <div className="relative">
+                                            <img
+                                                src={friend.Avatar}
+                                                alt=""
+                                                className={`w-12 h-12 rounded-full object-cover `}
+                                            />
+                                            {lockedChats.has(friend.ID) && (
+                                                <span className="absolute -bottom-0.5 -right-0.5 bg-purple-600 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
+                                                    🔒
+                                                </span>
+                                            )}
+                                        </div>
+
                                         <div className="text-left flex-1">
                                             <p className="font-medium text-gray-800">
                                                 {friend.Name}
@@ -1064,6 +1159,114 @@ function Chat() {
                                 className="flex-1 py-2 bg-purple-600 text-white rounded-xl"
                             >
                                 Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showLockModal && lockTarget && (
+                <div
+                    className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+                    // onclick={() => e.stopPropagation()}
+                    onClick={() => setShowLockModal(false)}
+                >
+                    <div
+                        className="bg-white w-[90%] max-w-sm rounded-2xl p-5 space-y-4 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-lg font-semibold text-purple-600">
+                            {lockMode === "set" ? "Lock Chat" : "Remove Lock"}
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            {lockMode === "set"
+                                ? `Set a PIN to lock your chat with ${lockTarget.Name}`
+                                : `Enter PIN to remove lock from ${lockTarget.Name}'s chat`
+                            }
+                        </p>
+                        <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={lockPin}
+                            onChange={e => {
+                                setLockPin(e.target.value.replace(/\D/g, ""))
+                                setLockError("")
+                            }}
+                            placeholder="Enter PIN"
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500 text-center text-2xl tracking-widest"
+                            autoFocus
+                        />
+                        {lockError && (
+                            <p className="text-sm text-red-500 text-center">{lockError}</p>
+                        )}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowLockModal(false)}
+                                className="flex-1 py-2 bg-gray-100 rounded-xl"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleLockSubmit}
+                                className="flex-1 py-2 bg-purple-600 text-white rounded-xl"
+                            >
+                                {lockMode === "set" ? "Lock" : "Remove Lock"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showPinEntry && pintEntryTarget && (
+                <div
+                    className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+                    onClick={() => setShowPinEntry(false)}
+                >
+                    <div
+                        className="bg-white w-[90%] max-w-sm rounded-2xl p-5 space-y-4 shadow-xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="text-center">
+                            <span className="text-4xl">🔒</span>
+                            <h2 className="mt-2 text-lg font-semibold text-gray-800">
+                                This chat is locked
+                            </h2>
+                            <p>
+                                Enter Your PIN to open {pintEntryTarget.Name}'s chat
+                            </p>
+                        </div>
+                        <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={pinEntryValue}
+                            onChange={e => {
+                                setPinEntryValue(e.target.value.replace(/\D/g, ""))
+                                setPinEntryError("")
+                            }}
+                            onKeyDown={e => {
+                                e.key === "Enter" && handlePinEntrySubmit()
+                            }}
+                            placeholder="••••"
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500 text-center text-3xl tracking-[0.5em]"
+                            autoFocus
+                        />
+                        {pinEntryError && (
+                            <p className="text-sm text-red-500 text-center">
+                                {pinEntryError}
+                            </p>
+                        )}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowPinEntry(false)}
+                                className="flex-1 py-2 bg-gray-100 rounded-xl"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handlePinEntrySubmit}
+                                className="flex-1 py-2 bg-purple-600 text-white rounded-xl"
+                            >
+                                Open
                             </button>
                         </div>
                     </div>
