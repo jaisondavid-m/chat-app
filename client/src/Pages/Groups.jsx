@@ -36,6 +36,14 @@ function Groups() {
     const [showManage, setShowManage] = useState(false)
     const [addEmail, setAddEmail] = useState("")
     const [addError, setAddError] = useState("")
+    const [newName, setNewName] = useState("")
+    const [newDesc, setNewDesc] = useState("")
+    const [newAvatar, setNewAvatar] = useState("")
+    const [newAvatarFile, setNewAvatarFile] = useState(null)
+    const [showEditGroup, setShowEditGroup] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deleting, setDeleting] = useState(false)
+    const [canDelete, setCanDelete] = useState(false)
     const socket = useRef(null)
     const bottomRef = useRef(null)
     const pressTimer = useRef(null)
@@ -68,7 +76,7 @@ function Groups() {
                 try {
                     const res = await api.get(`/auth/group/${g.ID}/unread`)
                     counts[g.ID] = res.data?.count || 0
-                } catch{}
+                } catch { }
             })
         )
         setUnreadCounts(counts)
@@ -96,8 +104,8 @@ function Groups() {
 
     const uploadImage = async (file) => {
         const formData = new FormData()
-        formData.append("image",file)
-        const res = await api.post("/auth/chat/upload",formData,{
+        formData.append("image", file)
+        const res = await api.post("/auth/chat/upload", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         })
         return res.data.url
@@ -109,7 +117,7 @@ function Groups() {
         setLoading(true)
 
         if (socket.current) socket.current.close()
-        
+
         socket.current = new WebSocket(
             `ws://localhost:8000/api/auth/ws?email=${user?.Email}`
         )
@@ -121,7 +129,8 @@ function Groups() {
         socket.current.onmessage = (event) => {
             const data = JSON.parse(event.data)
             if (data.type === "group_message" && data.group_id === group.ID) {
-                loadMessages(group.ID)
+                // loadMessages(group.ID)
+                setMessages(prev => [...prev, data.message])
             }
             if (data.type === "typing" && data.group_id === group.ID) {
                 setTyping(true)
@@ -132,6 +141,27 @@ function Groups() {
                 }, 3000);
             }
         }
+    }
+
+    const updateGroup = async (avatarUrl = newAvatar) => {
+        await api.put(`/auth/group/${activeGroup.ID}`, {
+            name: newName,
+            description: newDesc,
+            avatar: avatarUrl,
+        })
+    }
+
+    const deleteGroup = async () => {
+        try {
+            setDeleting(false)
+            await api.delete(`/auth/group/${activeGroup.ID}`)
+            setShowDeleteConfirm(false)
+            goBackToList()
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setDeleting(false)
+        } 
     }
 
     const goBackToList = () => {
@@ -146,13 +176,13 @@ function Groups() {
     }
 
     const sendMessage = async () => {
-        if (!message.trim() && !image) return 
+        if (!message.trim() && !image) return
         try {
             let imageUrl = ""
 
             if (image) imageUrl = await uploadImage(image)
-            
-            await api.post(`/auth/group/${activeGroup.ID}/messages`,{
+
+            await api.post(`/auth/group/${activeGroup.ID}/messages`, {
                 content: message,
                 image_url: imageUrl,
             })
@@ -174,11 +204,11 @@ function Groups() {
     const shareLocation = () => {
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                await api.post(`/auth/group/${activeGroup.ID}/messages`,{
+                await api.post(`/auth/group/${activeGroup.ID}/messages`, {
                     content: "",
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
-                    is_location:true,
+                    is_location: true,
                 })
                 socket.current?.send(JSON.stringify({
                     type: "group_message",
@@ -191,6 +221,16 @@ function Groups() {
         )
     }
 
+    const sendTyping = () => {
+        socket.current?.send(JSON.stringify({
+            type: "typing",
+            group_id: activeGroup.ID,
+            from: user?.Email,
+        }))
+    }
+
+    const debounceTyping = useRef(null)
+
     const openEdit = () => {
         setEditingId(actionMsg.ID)
         setEditText(actionMsg.Content)
@@ -199,8 +239,8 @@ function Groups() {
 
     const saveEdit = async () => {
         try {
-            await api.put(`/auth/group/message/${editingId}`,{ content: editText })
-            socket.current?.send(JSON.stringify({ type: "group_message",group_id: activeGroup.ID }))
+            await api.put(`/auth/group/message/${editingId}`, { content: editText })
+            socket.current?.send(JSON.stringify({ type: "group_message", group_id: activeGroup.ID }))
             setEditingId(null)
             setEditText("")
             loadMessages(activeGroup.ID)
@@ -222,8 +262,8 @@ function Groups() {
 
     const reactToMessage = async (id, emoji) => {
         try {
-            await api.put(`/auth/group/message/${id}/react`,{ emoji })
-            socket.current?.send(JSON.stringify({ type: "group_message" , group_id: activeGroup.ID }))
+            await api.put(`/auth/group/message/${id}/react`, { emoji })
+            socket.current?.send(JSON.stringify({ type: "group_message", group_id: activeGroup.ID }))
             loadMessages(activeGroup.ID)
         } catch (err) {
             console.error(err)
@@ -231,7 +271,7 @@ function Groups() {
     }
 
     const handleCreateGroup = async () => {
-        if(!createName.trim()) {
+        if (!createName.trim()) {
             setCreateError("Group Name is Required")
             return
         }
@@ -239,7 +279,7 @@ function Groups() {
         setCreateError("")
         try {
             const emails = createEmails.split(",").map(e => e.trim()).filter(Boolean)
-            await api.post("/auth/group",{
+            await api.post("/auth/group", {
                 name: createName.trim(),
                 description: createDesc.trim(),
                 member_emails: emails,
@@ -260,7 +300,7 @@ function Groups() {
         if (!addEmail.trim()) return
         setAddError("")
         try {
-            await api.post(`/auth/group/${activeGroup.ID}/member`,{ email: addEmail.trim() })
+            await api.post(`/auth/group/${activeGroup.ID}/member`, { email: addEmail.trim() })
             setAddEmail("")
             loadGroupDetails(activeGroup.ID)
         } catch (err) {
@@ -277,10 +317,10 @@ function Groups() {
         }
     }
 
-    const handleChangeRole = async  (userId, currentRole) => {
+    const handleChangeRole = async (userId, currentRole) => {
         const newRole = currentRole === "admin" ? "member" : "admin"
         try {
-            await api.put(`/auth/group/${activeGroup.ID}/member/${userId}/role`,{ role: newRole })
+            await api.put(`/auth/group/${activeGroup.ID}/member/${userId}/role`, { role: newRole })
             loadGroupDetails(activeGroup.ID)
         } catch (err) {
             console.error(err)
@@ -290,13 +330,13 @@ function Groups() {
     const getSenderName = (senderId) => {
         if (senderId === user?.ID) return "You"
         const m = members.find(m => m.user_id === senderId)
-        return m?.name || "Unkowm"
+        return m?.name || "Unkown"
     }
 
     const renderMessageWithLinks = (text = "") => {
         const urlRegex = /(https:\/\/[^\s]+)/gi
         return text.split(urlRegex).map((part, i) => {
-            if(part.match(urlRegex)) {
+            if (part.match(urlRegex)) {
                 const href = part.startsWith("http") ? part : `https://${part}`
                 return (
                     <a
@@ -318,6 +358,10 @@ function Groups() {
         pressTimer.current = setTimeout(() => {
             setActionMsg(msg)
             setShowActions(true)
+            setCanDelete(false)
+            setTimeout(() => {
+                setCanDelete(true)
+            }, 3000);
         }, 700)
     }
 
@@ -325,18 +369,18 @@ function Groups() {
 
     useEffect(() => {
         loadGroups()
-    },[])
+    }, [])
 
     useEffect(() => {
         if (groups.length > 0) loadUnreadCounts(groups)
-    },[groups.length])
+    }, [groups.length])
 
     useEffect(() => {
         return () => {
             socket.current?.close()
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
         }
-    },[])
+    }, [])
 
     useEffect(() => {
         const close = (e) => {
@@ -348,9 +392,13 @@ function Groups() {
                 setShowManage(false)
             }
         }
-        window.addEventListener("keydown",close)
-        return () => window.removeEventListener("keydown",close)
-    },[])
+        window.addEventListener("keydown", close)
+        return () => window.removeEventListener("keydown", close)
+    }, [])
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, [messages])
 
     return (
         <MobileLayout>
@@ -386,7 +434,7 @@ function Groups() {
                                         className="flex w-full px-4 py-3 items-center gap-3 border-b hover:bg-gray-50 transition rounded-xl mx-2 my-1 shadow-sm bg-white"
                                     >
                                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-lg font-semibold   shadow">
-                                            {group.Avatar 
+                                            {group.Avatar
                                                 ? <img src={group.Avatar} alt="" className="w-full h-full object-cover" />
                                                 : group.Name?.[0]?.toUpperCase()
                                             }
@@ -394,7 +442,7 @@ function Groups() {
                                         <div className="text-left flex-1 min-w-0">
                                             <p className="font-medium text-gray-800 truncate">{group.Name}</p>
                                             <div className="flex items-center justify-between">
-                                                <p classname="text-sm text-gray-400 truncate">{group.Description || "No Descriptoin"}</p>
+                                                <p className="text-sm text-gray-400 truncate">{group.Description || "No Descriptoin"}</p>
                                                 {unreadCounts[group.ID] > 0 && (
                                                     <span className="ml-2 shrink-0 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                                                         {unreadCounts[group.ID] > 99 ? "99+" : unreadCounts[group.ID]}
@@ -487,12 +535,33 @@ function Groups() {
                                 </p>
                             </div>
                             {isAdmin() && (
-                                <button
-                                    onClick={() => setShowManage(true)}
-                                    className="text-purple-600 text-sm font-medium"
-                                >
-                                    Manage
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setShowManage(true)}
+                                        className="text-purple-600 text-sm font-medium"
+                                    >
+                                        Manage
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setNewName(activeGroup.Name)
+                                            setNewDesc(activeGroup.Description)
+                                            setNewAvatar(activeGroup.Avatar || "")
+                                            setNewAvatarFile(null)
+                                            setShowEditGroup(true)
+                                        }}
+                                        className="text-blue-600 text-sm font-medium"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(true)}
+                                        className="text-red-500 text-sm font-medium"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+
                             )}
                         </div>
                         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
@@ -524,18 +593,18 @@ function Groups() {
                                                         onMouseLeave={cancelPress}
                                                         onTouchStart={() => isMe && startPress(msg)}
                                                         onTouchEnd={cancelPress}
-                                                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-md break-words ${
-                                                            isMe ? "bg-purple-600 text-white rounded-br-md" : "bg-white text-gray-800 rounded-bl-md"
-                                                        }`}
+                                                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-md break-words ${isMe ? "bg-purple-600 text-white rounded-br-md" : "bg-white text-gray-800 rounded-bl-md"
+                                                            }`}
                                                     >
                                                         {msg.IsLocation ? (
                                                             <a
                                                                 href={`https://www.google.com/maps?q=${msg.Latitude},${msg.Longitude}`}
                                                                 target="_blank"
                                                                 rel="noreferrer"
-                                                                className={`underline font-medium ${isMe ? "text-white" : "text-blue-600"}`}
+                                                            // className={`underline font-medium ${isMe ? "text-white" : "text-blue-600"}`}
                                                             >
-                                                                Shared Location
+                                                                {/* Shared Location */}
+                                                                <img src={`https://maps.googleapis.com/maps/staticmap?center=${msg.Latitude},${msg.Longitude}&zoom=15&size=200x100&makers=color:red%7C${msg.Latitude},${msg.Longitude}`} className="rounded-lg" />
                                                             </a>
                                                         ) : (
                                                             <>
@@ -554,7 +623,7 @@ function Groups() {
                                                         )}
                                                     </div>
                                                     {msg.Reaction && (
-                                                        <div className={`absolute -bottom-3 text-sm bg-white px-2 rounded-full shadow ${isMe ? "right-2" : "left-2" }`}>
+                                                        <div className={`absolute -bottom-3 text-sm bg-white px-2 rounded-full shadow ${isMe ? "right-2" : "left-2"}`}>
                                                             {msg.Reaction}
                                                         </div>
                                                     )}
@@ -567,7 +636,7 @@ function Groups() {
                             {typing && (
                                 <p className="text-xs text-gray-400 italic">Someone is typing...</p>
                             )}
-                            <div ref={bottomRef}/>
+                            <div ref={bottomRef} />
                         </div>
                         <div className="p-3 border-t bg-white space-y-2 shadow-inner">
                             {image && (
@@ -604,7 +673,7 @@ function Groups() {
                                     onClick={() => setShowLocationConfirm(true)}
                                     className="p-2 rounded-xl border border-gray-200 hover:bg-gray-100 text-purple-600 text-xl"
                                 >
-                                    <IoLocationSharp/>
+                                    <IoLocationSharp />
                                 </button>
                             </div>
                             <div className="flex gap-0.5">
@@ -617,11 +686,15 @@ function Groups() {
                                     }}
                                     onChange={(e) => {
                                         setMessage(e.target.value)
-                                        socket.current?.send(JSON.stringify({
-                                            type: "typing",
-                                            group_id: activeGroup.ID,
-                                            from: user?.Email,
-                                        }))
+                                        // socket.current?.send(JSON.stringify({
+                                        //     type: "typing",
+                                        //     group_id: activeGroup.ID,
+                                        //     from: user?.Email,
+                                        // }))
+                                        if (debounceTyping.current) clearTimeout(debounceTyping.current)
+                                        debounceTyping.current = setTimeout(() => {
+                                            sendTyping
+                                        }, 500);
                                     }}
                                     placeholder="Type Message..."
                                     className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500"
@@ -688,7 +761,7 @@ function Groups() {
                                 Save
                             </button>
                             <button
-                                onClick={saveEdit}
+                                onClick={() => setEditingId(null)}
                                 className="flex-1 bg-red-600 text-white py-2 rounded-xl"
                             >
                                 Cancel
@@ -722,7 +795,7 @@ function Groups() {
                             onClick={() => {
                                 setShowReactionModal(false)
                                 setReactionMsg(null)
-                            }} 
+                            }}
                             className="w-full mt-4 py-2 bg-gray-200 rounded-xl"
                         >
                             Cancel
@@ -730,7 +803,7 @@ function Groups() {
                     </div>
                 </div>
             )}
-            {showLocationConfirm && (
+            {/* {showLocationConfirm && (
                 <div
                     className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
                     onClick={() => setShowLocationConfirm(false)}
@@ -760,7 +833,7 @@ function Groups() {
                         </div>
                     </div>
                 </div>
-            )}
+            )} */}
             {showLocationConfirm && (
                 <div
                     className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
@@ -872,7 +945,7 @@ function Groups() {
                                                 className="text-xs text-purple-600 bg-purple-50 border border-purple-200 px-2 py-1 rounded-lg hover:bg-purple-100"
                                                 title={m.role === "admin" ? "Demote to member" : "Promote to Admin"}
                                             >
-                                                {m.role === "admin" ? "↓" : "↑" }
+                                                {m.role === "admin" ? "↓" : "↑"}
                                             </button>
                                             <button
                                                 onClick={() => handleRemoveMember(m.user_id)}
@@ -892,6 +965,108 @@ function Groups() {
                         >
                             Done
                         </button>
+                    </div>
+                </div>
+            )}
+            {showEditGroup && (
+                <div
+                    className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+                    onClick={() => setShowEditGroup(false)}
+                >
+                    <div
+                        className="bg-white w-[90%] max-w-sm rounded-2xl p-5 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-lg font-semibold text-purple-600">Edit Group</h2>
+                        <input
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            placeholder="Group Name"
+                            className="w-full border px-3 py-2 rounded-xl"
+                        />
+                        <input
+                            value={newDesc}
+                            onChange={(e) => setNewDesc(e.target.value)}
+                            placeholder="Description"
+                            className="w-full border px-3 py-2 rounded-xl"
+                        />
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-700">Group Avatar</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setNewAvatarFile(e.target.files?.[0] || null)}
+                                className="w-full border px-3 py-2 rounded-xl"
+                            />
+                            {newAvatarFile && (
+                                <p className="text-xs text-gray-500 truncate">{newAvatarFile.name}</p>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    setShowEditGroup(false)
+                                    setNewAvatarFile(null)
+                                }}
+                                className="flex-1 py-2 bg-gray-200 rounded-xl"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    let avatarUrl = newAvatar
+                                    if (newAvatarFile) {
+                                        avatarUrl = await uploadImage(newAvatarFile)
+                                    }
+                                    await updateGroup(avatarUrl)
+                                    setNewAvatarFile(null)
+                                    setShowEditGroup(false)
+                                    loadGroups()
+                                }}
+                                className="flex-1 py-2 bg-purple-600 text-white rounded-xl"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showDeleteConfirm && (
+                <div
+                    className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+                    onClick={() => !deleting && setShowDeleteConfirm(false)}
+                >
+                    <div
+                        className="bg-white w-[90%] max-w-sm rounded-2xl p-5 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-lg font-semibold text-red-500">
+                            Delete Group
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                            Are You Sure Want to Delete This Group ? This cannot be undone.
+                        </p>
+                        {deleting && (
+                            <p className="text-sm text-gray-500">
+                                Deleting in 3 Seconds
+                            </p>
+                        )}
+                        <div className="flex gap-2">
+                            <button
+                                disabled={deleting}
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="flex-1 py-2 bg-gray-200 rounded-xl"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                disabled={deleting}
+                                onClick={deleteGroup}
+                                className="flex-1 py-2 bg-red-500 text-white rounded-xl"
+                            >
+                                {deleting ? "Deleting..." : "Delete"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
