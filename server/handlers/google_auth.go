@@ -26,12 +26,12 @@ func GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	if err := utils.VerifyRecaptcha(req.RecaptchaToken); err != nil {
-		c.JSON(http.StatusForbidden,gin.H{
-			"message":"Bot detected. Please try again.",
-		})
-		return
-	}
+	// if err := utils.VerifyRecaptcha(req.RecaptchaToken); err != nil {
+	// 	c.JSON(http.StatusForbidden,gin.H{
+	// 		"message":"Bot detected. Please try again.",
+	// 	})
+	// 	return
+	// }
 
 	payload, err := idtoken.Validate(context.Background(),req.Token,GoogleClientID)
 	if err != nil {

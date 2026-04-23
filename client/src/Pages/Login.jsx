@@ -21,17 +21,17 @@ function Login() {
 
         try {
 
-            const recaptchaToken = await new Promise((resolve, reject) => {
-                window.grecaptcha.ready(() => {
-                    window.grecaptcha
-                        .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, {action: "login"})
-                        .then(resolve)
-                        .catch(reject)
-                })
-            })
+            // const recaptchaToken = await new Promise((resolve, reject) => {
+            //     window.grecaptcha.ready(() => {
+            //         window.grecaptcha
+            //             .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, {action: "login"})
+            //             .then(resolve)
+            //             .catch(reject)
+            //     })
+            // })
 
             const token = credentailResponse.credential
-            await api.post("/auth/google", { token , recaptchaToken: recaptchaToken })
+            await api.post("/auth/google", { token })
             await loadUser()
             navigate("/home")
         } catch (err) {
@@ -66,7 +66,7 @@ function Login() {
                         <GoogleLogin
                             onSuccess={handleSuccess}
                             onError={handleError}
-                            use_fedcm_for_button
+                            // use_fedcm_for_button
                         />
                     </div>
                 </div>
