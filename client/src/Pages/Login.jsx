@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { GoogleLogin } from "@react-oauth/google"
 import api from "../api/axios.js"
 import { useAuth } from "../context/AuthContext.jsx"
@@ -20,8 +20,18 @@ function Login() {
         setError("")
 
         try {
+
+            const recaptchaToken = await new Promise((resolve, reject) => {
+                window.grecaptcha.ready(() => {
+                    window.grecaptcha
+                        .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, {action: "login"})
+                        .then(resolve)
+                        .catch(reject)
+                })
+            })
+
             const token = credentailResponse.credential
-            await api.post("/auth/google", { token })
+            await api.post("/auth/google", { token , recaptchaToken: recaptchaToken })
             await loadUser()
             navigate("/home")
         } catch (err) {
@@ -36,6 +46,10 @@ function Login() {
     const handleError = () => {
         setError("Google Authentication Failed")
     }
+
+    useEffect(() => {
+
+    },[])
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br via-white to-purple-50 px-4">
@@ -52,6 +66,7 @@ function Login() {
                         <GoogleLogin
                             onSuccess={handleSuccess}
                             onError={handleError}
+                            use_fedcm_for_button
                         />
                     </div>
                 </div>
