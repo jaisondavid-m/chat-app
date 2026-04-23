@@ -1,0 +1,6 @@
+# server/.dockerignore
+.env
+*.md
+.git
+uploads/
+tmp/
