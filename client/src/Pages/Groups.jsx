@@ -601,10 +601,13 @@ function Groups() {
                                                                 href={`https://www.google.com/maps?q=${msg.Latitude},${msg.Longitude}`}
                                                                 target="_blank"
                                                                 rel="noreferrer"
-                                                            // className={`underline font-medium ${isMe ? "text-white" : "text-blue-600"}`}
+                                                                className="block"
                                                             >
-                                                                {/* Shared Location */}
-                                                                <img src={`https://maps.googleapis.com/maps/staticmap?center=${msg.Latitude},${msg.Longitude}&zoom=15&size=200x100&makers=color:red%7C${msg.Latitude},${msg.Longitude}`} className="rounded-lg" />
+                                                                <img
+                                                                    src={`https://staticmap.openstreetmap.de/staticmap.php?center=${msg.Latitude},${msg.Longitude}&zoom=15&size=600x300&markers=${msg.Latitude},${msg.Longitude},red-pushpin`}
+                                                                    alt="Shared location map"
+                                                                    className="mt-1 rounded-xl w-full max-w-full object-cover"
+                                                                />
                                                             </a>
                                                         ) : (
                                                             <>
