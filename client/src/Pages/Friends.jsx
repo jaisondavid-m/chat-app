@@ -21,6 +21,8 @@ function Friends() {
     const [blockUserData, setBlockUserData] = useState(null)
     const [blockCountdown, setBlockCountdown] = useState(3)
     const [blocking, setBlocking] = useState(false)
+    const [searchResults, setSearchResults] = useState([])
+    const [searchLoading, setSearchLoading] = useState(false)
 
     const loadData = async () => {
         try {
@@ -72,6 +74,7 @@ function Friends() {
             })
             setMessage(res.data.message)
             setEmail("")
+            setSearchResults([])
             await loadData()
         } catch (err) {
             setMessage(
@@ -167,12 +170,31 @@ function Friends() {
     }, [deleteFriend, countdown])
 
     useEffect(() => {
-        if(!blockUserData || blockCountdown === 0 ) return
+        if (!blockUserData || blockCountdown === 0) return
         const timer = setTimeout(() => {
             setBlockCountdown((prev) => prev - 1)
         }, 1000);
         return () => clearTimeout(timer)
-    },[blockUserData,blockCountdown])
+    }, [blockUserData, blockCountdown])
+
+    useEffect(() => {
+        if (!email.trim()) {
+            setSearchResults([])
+            return
+        }
+        const delay = setTimeout(async () => {
+            try {
+                setSearchLoading(true)
+                const res = await api.get(`/auth/search?q=${email}`)
+                setSearchResults(res.data.users || [])
+            } catch (err) {
+                console.error(err)
+            } finally {
+                setSearchLoading(false)
+            }
+        }, 400)
+        return () => clearTimeout(delay)
+    }, [email])
 
     return (
         <MobileLayout>
@@ -221,7 +243,7 @@ function Friends() {
                             <input
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Enter Email"
+                                placeholder="Search by Email"
                                 className="w-full border border-gray-200 rounded-xl px-4 py-2 outline-none focus:border-purple-500"
                             />
                             <button
@@ -237,6 +259,39 @@ function Friends() {
                         </div>
                         {message && (
                             <p className="text-sm text-gray-500">{message}</p>
+                        )}
+                        {searchLoading && (
+                            <p className="text-sm text-gray-400 mt-2">Searching...</p>
+                        )}
+                        {!searchLoading && searchResults.length > 0 && (
+                            <div className="bg-gray-50 border rounded-xl mt-2 max-h-40 overflow-y-auto">
+                                {searchResults.map((user) => (
+                                    <div
+                                        key={user.ID}
+                                        className="flex items-center justify-between p-2 hover:bg-gray-100"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                src={user.Avatar}
+                                                className="w-8 h-8 rounded-full"
+                                            />
+                                            <div>
+                                                <p className="text-sm font-medium">{user.Name}</p>
+                                                <p className="text-xs text-gray-400">{user.Email}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setEmail(user.Email)
+                                                setSearchResults([])
+                                            }}
+                                            className="text-purple-600 text-sm"
+                                        >
+                                            Select
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </div>
                 )}
@@ -448,17 +503,16 @@ function Friends() {
                             <button
                                 onClick={() => blockUser(blockUserData.ID)}
                                 disabled={blockCountdown > 0 || blocking}
-                                className={`w-1/2 rounded-xl py-2 text-sm text-white ${
-                                    blockCountdown > 0
-                                    ? "bg-gray-400 cursor-not-allowed"
-                                    : "bg-yellow-500"
-                                }`}
+                                className={`w-1/2 rounded-xl py-2 text-sm text-white ${blockCountdown > 0
+                                        ? "bg-gray-400 cursor-not-allowed"
+                                        : "bg-yellow-500"
+                                    }`}
                             >
                                 {blocking
                                     ? "Blocking..."
                                     : blockCountdown > 0
-                                    ? `Block (${blockCountdown})`
-                                    : "Block"
+                                        ? `Block (${blockCountdown})`
+                                        : "Block"
                                 }
                             </button>
                         </div>

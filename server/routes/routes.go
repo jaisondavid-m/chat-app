@@ -29,6 +29,7 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.GET("/messages/unread-counts", handlers.GetUnReadCounts)
 		auth.PUT("/messages/seen/:email", handlers.MarkSeen)
 		auth.GET("/ws", handlers.ChatSocket)
+		auth.GET("/search", handlers.SearchUsers)
 		auth.POST("/friend/request", handlers.SendFriendRequest)
 		auth.GET("/friend/requests", handlers.GetFriendRequests)
 		auth.POST("/friend/accept/:id", handlers.AcceptFriendRequest)

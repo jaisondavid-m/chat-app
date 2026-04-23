@@ -537,3 +537,39 @@ func isBlocked(user1ID, user2ID uint) bool {
 
 	return blocked
 }
+
+func SearchUsers(c *gin.Context) {
+
+	me, ok := getCurrentUser(c)
+
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorixed",
+		})
+		return
+	}
+
+	query := strings.TrimSpace(strings.ToLower(c.Query("q")))
+	if query == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"users": []models.User{},
+		})
+		return
+	}
+
+	var users []models.User
+
+	err := config.DB.Where("email LIKE ? AND id != ?", query+"%", me.ID).Limit(10).Find(&users).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Search Failed",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"users": users,
+	})
+
+}
