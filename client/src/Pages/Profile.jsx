@@ -5,13 +5,14 @@ import MobileLayout from "../Components/MobileLayout"
 
 function Profile() {
 
-    const { user, loadUser } = useAuth()
+    const { user, loadUser, logout } = useAuth()
     const [name, setName] = useState(user?.Name || "")
     const [preview, setPreview] = useState(user?.Avatar)
     const [avatar, setAvatar] = useState(null)
     const [loading, setLoading] = useState(false)
     const [popup, setPopup] = useState("")
     const [editMode, setEditMode] = useState(false)
+    const [showLogoutModal, setShowLogoutModal] = useState(false)
 
     const handleFile = (e) => {
         const file = e.target.files[0]
@@ -91,6 +92,14 @@ function Profile() {
                             >
                                 Edit Profile
                             </button>
+                            <button
+                                onClick={() => {
+                                    setShowLogoutModal(true)
+                                }}
+                                className="w-full mt-3 bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-2xl transition"
+                            >
+                                Logout
+                            </button>
                         </>
                     ) : (
                         <>
@@ -137,6 +146,32 @@ function Profile() {
                     )}
                 </div>
             </div>
+            {showLogoutModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+                    <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-fadeIn">
+                        <h2 className="text-xl font-bold text-gray-800 text-center">
+                            Confirm Logout ?
+                        </h2>
+                        <p className="text-sm text-gray-500 text-center mt-2">
+                            Are You Sure Want to Logout ?
+                        </p>
+                        <div className="flex-1 gap-3 mt-6">
+                            <button
+                                onClick={() => setShowLogoutModal(false)}
+                                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-2xl transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={logout}
+                                className="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-2xl transition"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </MobileLayout>
     )
 }

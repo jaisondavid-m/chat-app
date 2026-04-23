@@ -29,12 +29,23 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
+    const logout = async () => {
+        try {
+            await api.post("/auth/logout")
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setUser(null)
+            window.location.href = "/login"
+        }
+    }
+
     useEffect(() => {
         loadUser()
     },[])
 
     return (
-        <AuthContext.Provider value={{ user , setUser , loading , error , loadUser }}>
+        <AuthContext.Provider value={{ user , setUser , loading , error , loadUser , logout }}>
             {children}
         </AuthContext.Provider>
     )
