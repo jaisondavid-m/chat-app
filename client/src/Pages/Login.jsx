@@ -33,7 +33,7 @@ function Login() {
             const token = credentailResponse.credential
             await api.post("/auth/google", { token })
             await loadUser()
-            navigate("/home")
+            navigate("/chat")
         } catch (err) {
             setError(
                 err.response?.data?.message || "Login Failed"
