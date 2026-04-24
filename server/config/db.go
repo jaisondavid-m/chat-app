@@ -83,6 +83,7 @@ func TiDBconnect() {
 	}
 
 	cert = strings.ReplaceAll(cert, `\n`,"\n")
+	
 
 	rootCertPool := x509.NewCertPool()
 

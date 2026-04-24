@@ -1,7 +1,7 @@
 import axios from "axios"
 
 const api = axios.create({
-    baseURL: "https://chat-app-8x7a.onrender.com/api",
+    baseURL: "https://chat-app-1-wl5y.onrender.com/api",
     withCredentials: true,
 })
 
