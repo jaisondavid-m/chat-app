@@ -12,7 +12,8 @@ import (
 
 func main() {
 
-	config.Connect()
+	// config.Connect()
+	config.TiDBconnect()
 	config.Migrate()
 
 	r := gin.Default()
