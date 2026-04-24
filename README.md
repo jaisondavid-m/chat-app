@@ -345,6 +345,59 @@ PUT /api/auth/admin/user/role/:id
 }
 ``
 
+## 🚀 Optimization
+
+### 📌 Overview
+To improve performance and scalability, multiple optimizations were applied across both frontend and backend. These changes helped reduce load time, improve responsiveness, and enhance the overall user experience.
+
+---
+
+### ⚡ Optimization Techniques
+
+#### 1) Frontend Optimization (Lazy Loading & Efficient Rendering)
+- Implemented lazy loading for major pages like Chat, Friends, Groups, and Admin Dashboard.
+- Reduced unnecessary re-renders by organizing components efficiently.
+- Split code into smaller chunks to improve loading performance.
+
+**Result:**
+- Faster initial load time  
+- Reduced bundle size  
+- Smooth navigation between pages  
+
+---
+
+#### 2) Backend Optimization (API & Database Efficiency)
+- Reduced redundant API calls by fetching only necessary data.
+- Optimized database queries using better structuring and indexing.
+- Improved middleware usage to avoid unnecessary processing.
+
+**Result:**
+- Faster API response time  
+- Reduced server load  
+- Better scalability  
+
+---
+
+#### 3) Media Optimization (Image Handling)
+- Controlled image upload size and optimized file handling.
+- Avoided sending large unnecessary files in chat.
+
+**Result:**
+- Reduced bandwidth usage  
+- Faster image/message delivery  
+
+---
+
+### 📊 Overall Impact
+- Improved application responsiveness  
+- Reduced load time  
+- Better real-time chat experience  
+
+---
+
+### 🌐 Deployment
+The project is deployed in a production environment with optimized configurations for better performance and stability.
+
 ## Folder Sturcture
 chat-app/
 ├─ client/                         # Frontend (React + Vite)
