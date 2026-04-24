@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"strings"
 
 	"github.com/joho/godotenv"
 	mysqlDriver "github.com/go-sql-driver/mysql"
@@ -80,6 +81,8 @@ func TiDBconnect() {
 	if cert == "" {
 		log.Fatal("DB_CERT is not set")
 	}
+
+	cert = strings.ReplaceAll(cert, `\n`,"\n")
 
 	rootCertPool := x509.NewCertPool()
 
