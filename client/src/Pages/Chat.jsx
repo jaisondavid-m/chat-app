@@ -153,7 +153,7 @@ function Chat() {
         }
         // await loadMessages(email)
         socket.current = new WebSocket(
-            `ws://localhost:8000/api/auth/ws?email=${user?.Email}`
+            `wss://chat-app-8x7a.onrender.com/api/auth/ws?email=${user?.Email}`
         )
         socket.current.onopen = async () => {
             await loadMessages(normalizedEmail)

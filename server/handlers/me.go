@@ -79,8 +79,11 @@ func DeleteMe(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access_token","",-1,"/","",false,true)
-	c.SetCookie("refresh_token","",-1,"/","",false,true)
+	// c.SetCookie("access_token","",-1,"/","",false,true)
+	// c.SetCookie("refresh_token","",-1,"/","",false,true)
+
+	ClearAuthCookie(c,"access_token")
+	ClearAuthCookie(c,"refresh_token")
 
 	c.JSON(http.StatusOK,gin.H{
 		"message":"Account deleted Successfully",
