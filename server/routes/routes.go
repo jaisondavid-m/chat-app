@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"server/handlers"
+	"server/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -59,6 +60,14 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.PUT("/group/message/:id/react", handlers.ReactGroupMessage)
 		auth.PUT("/group/:id/seen", handlers.MarkGroupSeen)
 		auth.GET("/group/:id/unread", handlers.GetGroupUnreadCount)
+		admin := auth.Group("/admin")
+		admin.Use(middleware.Admin())
+		{
+			admin.GET("/users",handlers.GetAllUsers)
+			admin.GET("/stats",handlers.GetAdminStats)
+			admin.GET("/group/count",middleware.GetTotalGroup)
+			admin.GET("/group/active/count",middleware.GetActiveGroupCount)
+		}
 	}
 
 	api.GET("/health", func(c *gin.Context) {

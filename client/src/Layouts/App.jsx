@@ -10,6 +10,7 @@ import PublicRoute from '../routes/PublicRoute.jsx'
 import NotFound from "../Pages/NotFound.jsx"
 import Friends from '../Pages/Friends.jsx'
 import About from "../Pages/About.jsx"
+import AdminDashboard from '../Pages/AdminDashboard.jsx'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path='/setting' element={<ProtectedRoute><Setting/></ProtectedRoute>}/>
           <Route path='/friends' element={<ProtectedRoute><Friends/></ProtectedRoute>}/>
           <Route path='/about' element={<ProtectedRoute><About/></ProtectedRoute>} />
+          <Route path='/admin' element={<ProtectedRoute><AdminDashboard/></ProtectedRoute>} />
           <Route path='*' element={<NotFound/>} />
         </Routes>
     </BrowserRouter>

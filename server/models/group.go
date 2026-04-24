@@ -38,6 +38,7 @@ type GroupMessage struct {
 	IsLocation bool    `gorm:"default:false"`
 }
 
+
 type GroupMessageRead struct {
 	gorm.Model
 	MessageID uint `gorm:"not null;uniqueIndex:idx_msg_reader,priority:1"`

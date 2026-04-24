@@ -1,10 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom"
 import { FaUser, FaUsers, FaCog } from "react-icons/fa"
 import { FaMessage, FaUserGroup, FaCircleInfo } from "react-icons/fa6"
+import { useAuth } from "../context/AuthContext"
 
 function BottomNav() {
 
     const location = useLocation()
+    const { user } = useAuth()
 
     const tabs = [
         { path: "/chat", label: "Chat", icon: <FaMessage size={18} /> },
@@ -12,6 +14,10 @@ function BottomNav() {
         { path: "/groups", label: "Group", icon: <FaUsers size={18} /> },
         { path: "/profile", label: "Profile", icon: <FaUser size={18} /> },
         { path: "/about" , label: "About" , icon: <FaCircleInfo size={18}/>  },
+        ...(user?.Role === "admin"
+            ? [{ path: "/admin" , label: "Admin" , icon: <FaCog size={18}/> }]
+            : []
+        )
     ]
 
     const activeIndex = Math.max(tabs.findIndex(
