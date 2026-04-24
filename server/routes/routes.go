@@ -12,6 +12,12 @@ func RegisterRoutes(r *gin.Engine) {
 
 	api := r.Group("/api")
 
+  api.GET("/health", func(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Server is very healthy",
+	})
+})
+
 	auth := api.Group("/auth")
 	{
 		auth.POST("/google", handlers.GoogleLogin)
