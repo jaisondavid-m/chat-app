@@ -13,6 +13,8 @@ function Profile() {
     const [popup, setPopup] = useState("")
     const [editMode, setEditMode] = useState(false)
     const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [canDelete, setCanDelete] = useState(false)
 
     const handleFile = (e) => {
         const file = e.target.files[0]
@@ -41,6 +43,15 @@ function Profile() {
             setTimeout(() => {
                 setPopup("")
             }, 200);
+        }
+    }
+
+    const handleDeleteAccount = async () => {
+        try {
+            await api.delete("/auth/me")
+            logout()
+        } catch (err) {
+            alert("Failed to delete Account")
         }
     }
 
@@ -96,9 +107,21 @@ function Profile() {
                                 onClick={() => {
                                     setShowLogoutModal(true)
                                 }}
-                                className="w-full mt-3 bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-2xl transition"
+                                className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-2xl transition"
                             >
                                 Logout
+                            </button>
+                            <button
+                                onClick={() =>{
+                                    setShowDeleteModal(true)
+                                    setCanDelete(false)
+                                    setTimeout(() => {
+                                        setCanDelete(true)
+                                    }, 3000)
+                                }}
+                                className="w-full bg-black hover:bg-gray-900 text-white font-medium py-3 rounded-2xl transition"
+                            >
+                                Delete Account
                             </button>
                         </>
                     ) : (
@@ -169,6 +192,36 @@ function Profile() {
                                 Logout
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+                    <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl animate-fadeIn">
+                        <h2 className="text-xl font-bold text-gray-800 text-center">
+                            Delete Account
+                        </h2>
+                        <p className="text-sm text-gray-500 text-center mt-2">
+                            This Actions is permanent. All you data will be deleted.
+                        </p>
+                        {!canDelete ? (
+                            <p className="text-center text-sm text-red-500 mt-4">
+                                Please wait 3 seconds...
+                            </p>
+                        ) : (
+                            <button
+                                onClick={handleDeleteAccount}
+                                className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl transition"
+                            >
+                                Confirm Delete
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setShowDeleteModal(false)}
+                            className="w-full mt-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-2xl transition"
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </div>
             )}

@@ -17,6 +17,7 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/logout", handlers.Logout)
 		auth.POST("/refresh", handlers.RefreshToken)
 		auth.GET("/me", handlers.Me)
+		auth.DELETE("/me",handlers.DeleteMe)
 		auth.GET("/presence/:email", handlers.GetPresence)
 		auth.PUT("/user/profile", handlers.UpdateProfile)
 		auth.POST("/chat/send", handlers.SendMessage)

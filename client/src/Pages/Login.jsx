@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom"
 import Loading from "../Components/Loading.jsx"
 import { FaRobot } from "react-icons/fa"
 import { BsChatDotsFill } from "react-icons/bs"
-import { MdOutlineSecurity } from "react-icons/md"
+import { MdOutlineSecurity , MdWifiOff } from "react-icons/md"
 
 function Login() {
     const { loadUser } = useAuth()
@@ -60,6 +60,12 @@ function Login() {
                     </div>
                     <h1 className="text-3xl font-bold text-center text-purple-600" >ChatApp</h1>
                     <p className="mt-6 space-y-3">Welcome to Your real-time chat space</p>
+                </div>
+                <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm p-3 rounded-xl">
+                    <MdWifiOff className="text-yellow-600 text-lg" />
+                    <span>
+                        Use a Personal Network for the best experience. Avoid organizational or restricted networks.
+                    </span>
                 </div>
                 <div className="mt-6 flex justify-center">
                     <div className={loading ? "opacity-50 pointer-events-none" : ""}>
