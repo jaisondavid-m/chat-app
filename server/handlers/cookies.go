@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
