@@ -36,6 +36,6 @@ func ClearAuthCookie(c *gin.Context, name string) {
 	c.Writer.Header().Add("Set-Cookie",
 		name+"="+
 			"; Path=/; Max-Age=-1"+
-			"; Domail=chat-app-eta-nine-93.vercel.app"+
+			"; Domain=chat-app-eta-nine-93.vercel.app"+
 			"; Secure; HttpOnly; SameSite=None")
 }
