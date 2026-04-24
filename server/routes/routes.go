@@ -67,6 +67,7 @@ func RegisterRoutes(r *gin.Engine) {
 			admin.GET("/stats",handlers.GetAdminStats)
 			admin.GET("/group/count",middleware.GetTotalGroup)
 			admin.GET("/group/active/count",middleware.GetActiveGroupCount)
+			admin.PUT("/user/role/:id",handlers.SwitchUserRole)
 		}
 	}
 

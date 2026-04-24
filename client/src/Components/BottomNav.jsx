@@ -14,7 +14,7 @@ function BottomNav() {
         { path: "/groups", label: "Group", icon: <FaUsers size={18} /> },
         { path: "/profile", label: "Profile", icon: <FaUser size={18} /> },
         { path: "/about" , label: "About" , icon: <FaCircleInfo size={18}/>  },
-        ...(user?.Role === "admin"
+        ...(user?.Role === "admin" || user?.Role === "superadmin"
             ? [{ path: "/admin" , label: "Admin" , icon: <FaCog size={18}/> }]
             : []
         )
