@@ -49,6 +49,6 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK,gin.H{
-		"url":"http://localhost:8000/" + path,
+		"url":"https://chat-app-1-wl5y.onrender.com/" + path,
 	})
 }
