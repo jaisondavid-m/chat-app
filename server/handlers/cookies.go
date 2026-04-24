@@ -12,15 +12,15 @@ func setAuthCookie( c*gin.Context, name, value string,maxAge int) {
 		value,
 		maxAge,
 		"/",
-		"chat-app-eta-nine-93.vercel.app",
+		"",
 		true,
 		true,
 	)
-	c.Writer.Header().Add("Set-Cookie",
-	name+"="+value+
-		"; Path=/; Max-Age="+strconv.Itoa(maxAge)+
-		"; Domain=chat-app-eta-nine-93.vercel.app"+
-		"; Secure; HttpOnly; SameSite=None")
+	// c.Writer.Header().Add("Set-Cookie",
+	// name+"="+value+
+	// 	"; Path=/; Max-Age="+strconv.Itoa(maxAge)+
+	// 	"; Domain=chat-app-eta-nine-93.vercel.app"+
+	// 	"; Secure; HttpOnly; SameSite=None")
 }
 
 func ClearAuthCookie(c *gin.Context, name string) {
@@ -29,13 +29,13 @@ func ClearAuthCookie(c *gin.Context, name string) {
 		"",
 		-1,
 		"/",
-		"chat-app-eta-nine-93.vercel.app",
+		"",
 		true,
 		true,
 	)
-	c.Writer.Header().Add("Set-Cookie",
-		name+"="+
-			"; Path=/; Max-Age=-1"+
-			"; Domain=chat-app-eta-nine-93.vercel.app"+
-			"; Secure; HttpOnly; SameSite=None")
+	// c.Writer.Header().Add("Set-Cookie",
+	// 	name+"="+
+	// 		"; Path=/; Max-Age=-1"+
+	// 		"; Domain=chat-app-eta-nine-93.vercel.app"+
+	// 		"; Secure; HttpOnly; SameSite=None")
 }
