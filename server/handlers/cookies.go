@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 func setAuthCookie( c*gin.Context, name, value string,maxAge int) {
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie(
 		name,
 		value,
@@ -23,6 +25,7 @@ func setAuthCookie( c*gin.Context, name, value string,maxAge int) {
 }
 
 func ClearAuthCookie(c *gin.Context, name string) {
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie(
 		name,
 		"",
