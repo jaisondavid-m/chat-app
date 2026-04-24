@@ -264,6 +264,87 @@ A: It's an image message that disappers after it's viewed (backend marks it view
 - Use a personal network/mobile data when accessing the site. Avoid some organisation/corporate networks, as they block connections required for the TiDB database service
 - The Login system may not work in Incognito/Private mode, since browser restrictions can block cookies, local storage, or session data. Use a normal browser window for best results.
 
+## 15) Admin Panel Usage
+
+The application includes an **Admin Dashboard** for managing users and monitoring platform activity.
+
+---
+
+### Who is an Admin ?
+
+There are two elevated roles:
+
+#### `admin`
+- Can view dashboard
+- Can promote / demote users
+- Can view platform stats
+
+#### `superadmin`
+- Has all admin permissions
+- Cannot be modified by normal admins
+- Reserver for system-level control
+
+---
+
+### 📊 Accessing Admin Dashboard
+
+1. Login with an account that has `admin` or `superadmin` role.
+2. Navigate to: /admin
+3. you will see:
+- Platform Statistics (users , groups)
+- User List
+- Role Management Controls
+
+---
+
+### Dashboard Features
+
+#### Platform Overview
+
+Displays:
+- Total Users
+- Active Users
+- Total Groups
+- Active Groups
+
+**Technical:**
+GET /api/auth/admin/stats
+
+---
+
+#### Users List
+
+Shows:
+- Avatar
+- Name + Email
+- Role (`user`,`admin`,`superadmin`)
+- Status (Active/Disabled)
+
+**Technical:**
+GET /api/auth/admin/users
+
+---
+
+### Role Management
+
+Admins can change user roles directly from the dashboard.
+
+#### Promote User → Admin
+- Click **Promote** button
+- Confirm action in modal
+
+#### Demote Admin → User
+- Click **Demote**
+- Confirm action in modal
+
+**Technical:**
+PUT /api/auth/admin/user/role/:id
+``json
+{
+  "role":"admin"
+}
+``
+
 ## Folder Sturcture
 chat-app/
 ├─ client/                         # Frontend (React + Vite)

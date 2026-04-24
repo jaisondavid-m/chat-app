@@ -221,7 +221,7 @@ function AdminDashboard() {
                                 onClick={confirmRoleChange}
                                 className="px-4 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
                             >
-                                Confirm=
+                                Confirm
                             </button>
                         </div>
                     </div>
